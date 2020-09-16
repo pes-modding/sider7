@@ -1,0 +1,226 @@
+Tournament IDs - you can use them in your sider modules.
+This information has been extracted from the game files.
+Many thanks to digitalfoxx !!! - for showing which BINs to look into
+
+
+CompetitionRegulation.bin
+
+
+Club International Cup - 1
+European Club Championship - 2
+European Club Championship - 1026
+European Club Championship - 2050
+European Club Championship - 3074
+European Club Championship - 4098
+European Club Championship - 5122
+European Club Championship - 6146
+European Club Championship - 7170
+European Club Championship - 8194
+European Club Championship - 3
+European Club Championship - 1027
+European Club Championship - 2051
+European Club Championship - 3075
+European Club Championship - 4099
+European Club Championship - 5123
+European Club Championship - 6147
+European Club Championship - 7171
+European Club Championship - 8195
+European Club Championship - 4
+European Masters Cup - 5
+European Masters Cup - 1029
+European Masters Cup - 2053
+European Masters Cup - 3077
+European Masters Cup - 4101
+European Masters Cup - 5125
+European Masters Cup - 6149
+European Masters Cup - 7173
+European Masters Cup - 8197
+European Masters Cup - 9221
+European Masters Cup - 10245
+European Masters Cup - 11269
+European Masters Cup - 12293
+European Masters Cup - 6
+European Super Cup - 7
+South American Championship - 8
+South American Championship - 1032
+South American Championship - 2056
+South American Championship - 3080
+South American Championship - 4104
+South American Championship - 9
+South American Championship - 1033
+South American Championship - 2057
+South American Championship - 3081
+South American Championship - 4105
+South American Championship - 5129
+South American Championship - 6153
+South American Championship - 7177
+South American Championship - 8201
+South American Championship - 10
+English League - 17
+Serie A TIM - 18
+Spanish League - 19
+Ligue 1 Conforama - 20
+Eredivisie - 21
+Liga NOS - 22
+England Cup - 23
+Coppa Italia - 24
+Spanish Cup - 25
+Coupe de la Ligue BKT - 26
+Netherlands Cup - 27
+Portugal Cup - 28
+Campeonato Brasileiro Série A - 29
+Superliga Argentina - 30
+Brazilian Cup - 31
+International Cup - 34
+International Cup - 1058
+International Cup - 2082
+International Cup - 3106
+International Cup - 4130
+International Cup - 5154
+International Cup - 6178
+International Cup - 7202
+International Cup - 8226
+International Cup - 35
+European Qualifiers - 36
+European Qualifiers - 1060
+European Qualifiers - 2084
+European Qualifiers - 3108
+European Qualifiers - 4132
+European Qualifiers - 5156
+European Qualifiers - 6180
+European Qualifiers - 7204
+European Qualifiers - 8228
+North and Central American Qualifiers - 37
+North and Central American Qualifiers - 1061
+South American Qualifiers - 38
+South American Qualifiers - 1062
+Asia and Oceania Regional Qualifiers - 39
+Asia and Oceania Regional Qualifiers - 1063
+Asia and Oceania Regional Qualifiers - 2087
+African Regional Qualifiers - 40
+African Regional Qualifiers - 1064
+African Regional Qualifiers - 2088
+European Cup - 41
+European Cup - 1065
+European Cup - 2089
+European Cup - 3113
+European Cup - 4137
+European Cup - 5161
+European Cup - 6185
+European Cup - 42
+American Cup - 43
+Asia-Oceanian Cup - 44
+Asia-Oceanian Cup - 1068
+Asia-Oceanian Cup - 2092
+Asia-Oceanian Cup - 3116
+Asia-Oceanian Cup - 4140
+Asia-Oceanian Cup - 45
+African Cup - 46
+KONAMI Cup - 47
+KONAMI Cup - 1071
+KONAMI Cup - 2095
+KONAMI Cup - 3119
+KONAMI Cup - 4143
+KONAMI Cup - 5167
+KONAMI Cup - 6191
+KONAMI Cup - 7215
+KONAMI Cup - 8239
+KONAMI Cup - 48
+PEU League - 50
+PLA League - 51
+PAS League - 52
+PEU Cup - 53
+PLA Cup - 54
+PAS Cup - 55
+International Friendly Match - 56
+Training Match - 57
+Testimonial - 58
+Argentinean Cup - 59
+Campeonato AFP Planvital - 67
+Chilean Cup - 68
+English 2nd Division - 79
+Spanish 2nd Division - 80
+Domino's Ligue 2 - 81
+Italian 2nd Division - 82
+English Promotion Play-off - 83
+Spanish 2nd Division Playoffs - 84
+Italian Promotion Play-off - 85
+English Super Cup - 86
+Spanish Super Cup - 87
+French Super Cup - 88
+Supercoppa Italiana - 89
+Dutch Super Cup - 90
+Portuguese Super Cup - 91
+Argentine Super Cup - 92
+PEU Super Cup - 95
+PAS Super Cup - 97
+KONAMI League - 99
+Testimonial - 103
+American Cup - 104
+American Cup - 1128
+American Cup - 2152
+American Cup - 3176
+International Champions Cup NA - 105
+International Champions Cup SA - 106
+International Champions Cup Asia - 107
+World Selection Challenge - 108
+Jupiler Pro League - 115
+Russian Premier Liga - 116
+Raiffeisen Super League - 117
+Spor Toto Süper Lig - 118
+Liga Aguila - 119
+CFA Super League - 120
+Belgian Cup - 122
+Russian Cup - 123
+Swiss Cup - 124
+Turkish Cup - 125
+Colombian Cup - 126
+Chinese Cup - 127
+Belgian Super Cup - 128
+Russian Super Cup - 129
+Turkish Super Cup - 130
+Colombian Super Cup - 131
+Chinese Super Cup - 132
+Ladbrokes Premiership - 133
+First Phase - 134
+Top Six - 135
+Bottom Six - 136
+Scottish Cup - 137
+3F Superliga - 141
+Danish Cup - 142
+Regular Season - 147
+Championship Round - 148
+Bottom Round Group A - 149
+Bottom Round Group B - 150
+Play-Offs - 151
+Regular Season - 155
+Championship Play-offs - 156
+Play-Offs Group A - 157
+Play-Offs Group B - 158
+Play-Off Finals - 159
+Liga Aguila I Playoffs - 160
+Liga Aguila II Playoffs - 161
+TOYOTA Thai League - 162
+Campeonato Brasileiro Série B - 163
+Thai Cup - 164
+Thai Super Cup - 165
+First Phase - 166
+Second Phase - 167
+Liga Aguila I - 168
+Liga Aguila II - 169
+
+
+CompetitionRegulation4.bin
+
+
+AFC Champions League - 15
+AFC Champions League - 1039
+AFC Champions League - 2063
+AFC Champions League - 3087
+AFC Champions League - 4111
+AFC Champions League - 5135
+AFC Champions League - 6159
+AFC Champions League - 7183
+AFC Champions League - 8207
+AFC Champions League - 16
+

@@ -1,0 +1,399 @@
+<html>
+<head>
+<title>Sider 6 for Pro Evolution Soccer 2020</title>
+<style>
+body { margin-left: 1em; margin-right: 1em; margin-bottom: 2em; }
+body,h1,h2,h3,h4,h5,p,ol,ul,li { font-family: sans-serif; }
+h1 { margin-bottom: 0; }
+h4 { color: #660066; margin-top: 0.1em; margin-bottom: 0.1em; }
+h3 { color: #113399; text-decoration: underline; margin-top: 1.6em; }
+.warn { color: #660000; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #880000; border-right: 0.5em solid #880000; background-color: #ccbbbb; }
+.gwarn { color: #666666; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #888888; border-right: 0.5em solid #888888; background-color: #cccccc; }
+.note { color: #336600; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #336600; border-right: 0.5em solid #336600; background-color: #bbccbb; }
+pre { color: #003366; padding: 0.3em 0.5em 0.3em 0.5em; background-color: #dde5ff; font-family: monospace;
+    border-top: solid 1px #4477aa; font-size: 0.9em;
+}
+.user { font-weight: bold; color: #2255aa; }
+.soft { font-weight: bold; color: #336600; }
+.pathname { font-weight: normal; font-family: monospace; color: #336600; }
+.file { font-weight: normal; font-family: monospace; color: #660099; }
+a { color: #33f; }
+</style>
+</head>
+
+<body>
+<!--<a href="sider.jpg"><img src="sider.jpg" width="100%"/></a>-->
+
+<h1>Sider 6 for Pro Evolution Soccer 2020</h1>
+<h4>version 6.3.9 from August 8, 2020</h4>
+<a href="history.txt">history.txt</a>
+
+<h3>INTRODUCTION</h3>
+
+<p>Sider is a companion program for PES 2020 and PES 2020 Lite. It allows for
+small tweaks - such as "free side-select" (which is where sider gets its name from),
+and time expander for the demo version. It also facilitates game mods, created by the
+modding community. The two main features are LiveCPK and the scripting engine, where you can write your
+own mods in Lua programming language.</p>
+
+<p>LiveCPK makes it possible to replace game content
+at run-time with content from files stored on disk, instead of
+having to pack everything into CPK-archives. (This feature
+is similar to Kitserver's AFS2FS and to FileLoader for earler
+versions of PES). Depending on how and when exactly the game
+reads the replaced files, you can even live-edit some things,
+like textures or 3D models, without exiting the game.</p>
+
+<p>If you know a little bit how to program, you can write your own
+game logic using Sider's scripting engine. This requires some reading and understanding of how the game
+works, but it's really not that hard ;-)
+See <a href="scripting.html">scripting.html</a>
+- for detailed documentation on that.</p>
+
+<h3>HOW TO INSTALL</h3>
+
+<p>Move the folder that you just unpacked from the ZIP archive into a place, where your Windows user account has
+full permissions. I very <b>strongly recommend</b> to use one of these standard locations:
+Desktop, Documents, or your home directory.</p>
+
+<p>
+<a href="cap1.jpg"><img src="cap1.jpg" height="200"/></a>
+<a href="cap2.jpg"><img src="cap2.jpg" height="200"/></a>
+<a href="cap3.jpg"><img src="cap3.jpg" height="200"/></a>
+</p>
+
+<p>Starting with version 6.3, sider has no external dependences, meaning
+that everything that sider requires is included in its folder.
+You do not need to install any additional software to be able to run sider.
+You must have at least Windows 7 64-bit or newer (Sider will not work on XP/Vista).</p>
+
+<div class="warn">
+<p>People sometimes take sider files and stuff them into Steam's directory
+for PES 2020. I am not entirely sure where that idea originated. One possibilty is a
+"carry-over knowledge" of how Kitserver worked for old-gen PES games. However, in the
+case of sider, this is not a good way to organize things. In fact, it is a pretty bad idea, because:
+<ol>
+<li>you mix sider files with game files, and it can be tricky to
+remember which files belong to sider and which ones - to the game. Uninstalling
+sider then becomes more difficult.</li>
+<li>sider needs to create sider.log file and create and update various *.cache and *.ini files. If it has
+trouble doing so, due to folder permissions, it can lead to errors and crashes.
+<li>Steam may need/choose to "verify" game files, which can result in some of the
+sider files being deleted or corrupted in some way.</li>
+</ol>
+So, in other words, don't do it. There is absolutely no need for it.</p>
+</div>
+
+<h3>HOW TO UNINSTALL</h3>
+
+<p class="note">Before uninstalling, remember that you can always run the game <b>without</b> sider, for
+whatever reason. To do that, simply start the game via Steam or Steam desktop shortcut.
+(Like you normally would, if you didn't have sider)</p>
+
+<p>If you want to completely remove sider from your computer, simply delete
+its folder, and that is it - uninstallation complete.</p>
+
+
+<h3>HOW TO USE</h3>
+
+<p>Sider itself does not require Administrator privileges, you should
+run it under your regular account - the same one as you would use to
+start the game without Sider.</p>
+
+<h4>The new method (preferred)</h4>
+
+<p>The new <b>one-click</b> way is enabled by default now and it is super easy:
+just run <span class="file">sider.exe</span>, it will open a small window, then it will automatically
+launch the game itself, then Sider application will exit, but the game will
+continue running with the <span class="file">sider.dll</span> loaded into it.</p>
+
+<p class="gwarn">The very first time (or after Steam downloads a new, updated PES2020.exe), there will be a small delay
+between the launch of sider and the game starting - maybe 5-10 seconds, as sider needs to
+analyze the process and find hook places in memory. However, next time you do it, the game
+should start quickly (normally).</p>
+
+<h4>The old method</h4>
+<p>The "old" way is still supported too and if you prefer that, the
+sequence is the same as before. Make sure you comment out the
+"start.game" line in <span class="file">sider.ini</span>, and then:</p>
+<ol>
+<li>Run <span class="file">sider.exe</span>, it will open a small window, which you can
+minimize if you want, but do not close it.</li>
+<li>Run the game. Sider should automatically attach to the game process.</li>
+</ol>
+
+<p>If you don't see the effects of Sider in the game, check the
+<span class="file">sider.log</span> file (in the same folder where <span class="file">sider.exe</span> is) - it should
+contain some helpful information on what went wrong.</p>
+
+
+<h3>SETTINGS (SIDER.INI)</h3>
+
+<p>There are several settings you can set in <span class="file">sider.ini</span>:</p>
+
+<pre>
+start.game = "steam://rungameid/996470"
+</pre>
+
+<p>- optional setting. If it is specified, then Sider will
+operate in a new <b>"one-click launch" mode</b>: first, Sider will
+launch the game, using the provided steam url, then wait
+for the game to start and for <span class="file">sider.dll</span> to be loaded into
+the game process. After that, sider application will exit, but the
+game will continue with Sider activated - via <span class="file">sider.dll</span>.</p>
+
+
+<pre>
+exe.name = "\PES2020.exe"
+</pre>
+
+<p>- this sets the pattern(s) that the Sider program will use
+to identify which of the running processes is the game.
+You can have multiple "exe.name" lines in your <span class="file">sider.ini</span>,
+which is useful, for example, if you have several exe
+files with slightly different names that you use for
+online/offline play.</p>
+
+
+<pre>
+free.side.select = 1
+</pre>
+
+<p>- enables free movement of controllers. Normally, it is
+only possible in Exhibition modes, but with this setting
+set to 1, you will be able to move the controllers in the
+competition modes too.</p>
+
+<p>The 1st controller can also be moved into the middle,
+disabling it effectively. Use this carefully in the
+matches: if you move 1st controller into the middle, make
+sure that you have at least one other controller on the left
+or on the right. Otherwise, you will lose the control of the
+match. (default is: 0 - free movement disabled)</p>
+
+
+<pre>
+livecpk.enabled = 1
+</pre>
+
+<p>- Turns on the LiveCPK functionality of Sider. See below for a more
+detailed explanation in cpk.root option section.</p>
+
+
+<pre>
+debug = 0
+</pre>
+
+<p>- Setting this to values &gt; 0 will make Sider output some additional information
+into the log file (<span class="file">sider.log</span>). This is useful primarily for troubleshooting.
+Extra logging may slow the game down, so normally you would want to keep
+this setting set to 0. (Defaults to 0: some info, but no extra output)</p>
+
+
+<pre>
+close.on.exit = 0
+</pre>
+
+<p>- If this setting is set to 1, then Sider will close itself, when the
+game exits. This can be handy, if you use a batch file to start sider
+automatically right before the game is launched.
+(Defaults to 0: do not close)</p>
+
+
+<pre>
+start.minimized = 0
+</pre>
+
+<p>- If you set this to 1, then Sider will start with a minimized window.
+Again, like the previous option, this setting can be helpful, if you
+use a batch file to auto-start sider, just before the game launches.
+(Defaults to 0: normal window)</p>
+
+<pre>
+cpk.root = "c:\cpk-roots\balls-root"
+cpk.root = "c:\cpk-roots\kits-root"
+cpk.root = ".\another-root\stadiums"
+cpk.root = ".\livecpk\example-root"
+</pre>
+
+<p>- Specifies root folder (or folders), where the game files are stored that
+will be used for content replacing at run-time. It works like this:
+For example, the game wants to load a file that is stored in some CPK, with
+the relative path of <span class="pathname">common/render/thumbnail/ball/ball_001.dds</span>. Sider
+will intercept that action and check if one of the root folders have this
+file. If so, Sider will make the game read the content from that file instead
+of using game's original content. If multiple roots are specified, then
+they are checked in order that they are listed in <span class="file">sider.ini</span>. As soon as there
+is a filename match, the lookup stops. (So, higher cpk.root wins, if several of
+them have the same file). You can use either absolute paths or relative.
+Relative paths will be calculated relative to the folder where <span class="file">sider.exe</span> is
+located.</p>
+
+
+<pre>
+lua.enabled = 1
+</pre>
+
+<p>- This turns on/off the scripting support. Extension modules can be
+written in Lua 5.1 (LuaJIT), using a subset of standard libraries and
+also objects and events provides by sider. See <a href="scripting.html">scripting.html</a> for
+a programmer's guide to writing lua modules for sider.</p>
+
+<pre>
+lua.module = "camera.lua"
+lua.module = "kitrewrite.lua"
+</pre>
+
+<p>- Specifies the order in which the extension modules are loaded. These
+modules must be in "modules" folder inside the sider root directory.</p>
+
+<pre>
+jit.enabled = 1
+</pre>
+
+<p>- Allows to enable/disable JIT (Just-In-Time compiler) for Lua.
+By default, JIT is enabled - to provide performance boost for Lua modules.
+To turn it off, set to 0.</p>
+
+<pre>
+lua.gc.opt = "step"
+</pre>
+
+- This option allows to tweak Lua garbage collector (GC) behaviour.
+Two supported values are: "step" - for incremental collection, and
+"collect" - for full collection. Default is "step", and typically,
+you do not need to modify this, unless you see Lua memory errors
+in the log. In which case, try "collect".
+
+<pre>
+overlay.enabled = 1
+</pre>
+
+<p>- This option enables an interactive overlay. The overlay can display
+text that is provided by Lua modules, with one module having control
+of the overlay at any given time. By pressing hotkeys (set by
+<b>overlay.vkey.next-module</b> and <b>overlay.vkey.prev-module</b> options)
+the control of the overlay can be switched to the next or to the previous
+module, and so on. The overlay is toggled on/off with another
+hotkey, set by <b>overlay.vkey.toggle</b> option. When the overlay is on, the
+key presses are passed on to the module that is currently in control of
+the overlay. The module can handle those key events in whatever way
+it needs to, or ignore them altogether. For more information, see
+<a href="scripting.html">scripting.html</a></p>
+
+
+<pre>
+overlay.on-from-start = 1
+</pre>
+
+<p>- If set to 1, the overlay will appear as soon as possible, after
+the start of the game.
+(default is 0, meaning that overlay starts hidden, until toggled on)</p>
+
+
+<pre>
+overlay.location = "bottom"
+</pre>
+
+<p>- two possible locations: "top" and "bottom" of the screen</p>
+
+<pre>
+overlay.font-size = 0
+overlay.font = "Consolas"
+</pre>
+
+<p>- these two options control the font of overlay. Size 0 means that
+the font-size will be calculated automatically, based on height of
+the screen in pixels. Any TTF font installed on the system can be
+used, but monospaced fonts are recommended for easier formatting.</p>
+
+<pre>
+overlay.vkey.toggle = 0x20
+overlay.vkey.next-module = 0x31
+overlay.vkey.prev-module = 0xc0
+</pre>
+
+<p>- hot keys for toggling overlay on/off, and for switching control
+of the overlay among the modules. Values must be specified in
+hexadecimal format. The default ones are:
+<ul>
+    <li>0x20 [Space] - for toggle</li>
+    <li>0x31 [1]     - for next module</li>
+    <li>0xc0 [~]     - for previous module</li>
+</ul>
+Full list of codes for all keys can be found here:
+<a href="https://docs.microsoft.com/en-us/windows/desktop/inputdev/virtual-key-codes">
+https://docs.microsoft.com/en-us/windows/desktop/inputdev/virtual-key-codes</a></p>
+
+<pre>
+overlay.background-color = "102010c0"
+overlay.text-color = "80ff80c0"
+</pre>
+
+<p>- colors are specified in RRGGBBAA format (similar to how it is
+done in HTML, except that you do not put '#' character in front)</p>
+
+
+<pre>
+overlay.image-alpha-max = 0.8
+</pre>
+
+<p>- max value for alpha channel for the image displayed in the overlay
+(if there is one). This is useful, if you want the image to be slightly
+translucent, as a visual hint that it is part of overlay. A value around
+0.7 or 0.8 would give such effect.
+Defaults to 1.0. The accepted range of values are: [0.0 - 1.0]
+<ul>
+    <li>0.0 : fully transparent</li>
+    <li>1.0 : original alpha channel of the image is kept unmodified.</li>
+</ul></p>
+
+<pre>
+vkey.reload-1 = 0x10
+vkey.reload-2 = 0x52
+</pre>
+
+<p>- These two settings define a hot-key combination that can be used
+to reload Lua modules, without restarting the game. This is not a feature
+that you would normally use during regular gameplay, but if you are
+writing a module, very often you need to make a small fix or change.
+Restarting the game every time can be time consuming, so this feature
+allows to reload all modules that were modified since the last time
+they were loaded. Default is: Shift-R  (0x10 and 0x52).</p>
+
+
+<pre>
+game.priority.class = "above_normal"
+</pre>
+
+<p>- This option allows to change the priority of the game process. Sometimes
+this is useful, and reportedly can help to combat FPS drops. Supported values
+are: "above_normal", "below_normal", "high", "idle", "normal" and "realtime".
+By default, the game sets its priority to "above_normal".</p>
+
+
+<h3>CREDITS</h3>
+
+<p>
+Game research: <span class="user">nesa24, juce, digitalfoxx, zlac</span><br />
+Programming: <span class="user">juce</span><br />
+Testing: <span class="user">zlac, nesa24, Chuny, Hawke, sonofsam69, Cesc Fabregas, Paul LFC, mota10, predator002</span><br />
+Blue Champions League ball: <span class="user">Hawke, digitalfoxx</span><br />
+Trophies: <span class="user">MJTS-140914, juce</span><br />
+</p>
+
+<p>Sider license is a BSD-style license: <a href="license.txt">license.txt</a></p>
+
+<p>Sider uses the following 3rd-party software:</p>
+
+<span class="soft">LuaJIT</span> by Mike Pall (<a href="license-luajit.txt">license-luajit.txt</a>)<br />
+<span class="soft">Knuth-Morris-Pratt string matcher</span> from Project Nayuki (<a href="license-kmp.txt">license-kmp.txt</a>)<br />
+<span class="soft">FW1FontWrapper</span> library by Erik Rufelt<br />
+<span class="soft">zlib</span> by Jean-loup Gailly (compression) and Mark Adler (decompression)
+(<a href="license-zlib.txt">license-zlib.txt</a>)<br />
+<span class="soft">miniaudio</span> by David Reid
+(<a href="license-ma.txt">license-ma.txt</a>)<br />
+</ul>
+
+</body>
+</html>

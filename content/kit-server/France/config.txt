@@ -1,0 +1,53 @@
+; shirt parameters
+ShortSleevesModel=1       ; 1=Normal
+ShirtModel=144       ; 144, 151=Semi-long short sleeves, 160, 176=Legacy
+Collar=123       ; 1 to 126
+TightKit=0       ; 0=Off, 1=On
+ShirtPattern=3       ; 0 to 6
+WinterCollar=123       ; 1 to 126
+LongSleevesType=62       ; 62=Normal & Undershirt, 187=Only Undershirt
+
+; shirt - back side
+Name=0       ; 0=On, 1=Off
+NameShape=0       ; 0=Straight, 1=Light curve, 2=Medium curve, 3=Extreme curve
+NameY=15       ; 0 to 17
+NameSize=15       ; 0 to 31
+BackNumberY=21       ; 0 to 29
+BackNumberSize=13       ; 0 to 14
+BackNumberSpacing=1       ; 0 to 3
+
+; shirt - front side
+ChestNumberX=5       ; 0 to 31
+ChestNumberY=5       ; 0 to 7
+ChestNumberSize=14       ; 0 to 15
+
+; shorts parameters
+ShortsModel=2       ; 0 to 17
+ShortsNumberSide=0       ; 0=Left, 1=Right
+ShortsNumberX=9       ; 0 to 14
+ShortsNumberY=10       ; 0 to 15
+ShortsNumberSize=9       ; 0 to 31
+
+; texture files
+KitFile=u0008p1
+BackNumbersFile=u0008p1_back
+ChestNumbersFile=u0008p1_chest
+LegNumbersFile=u0008p1_leg
+NameFontFile=u0008p1_name
+
+; kit colors
+ShirtColor1=#141E32
+ShirtColor2=#141E32
+UndershirtColor=#2874B7
+ShortsColor=#D7D7D7
+SocksColor=#BD2835
+
+; sleeve badge positions
+RightShortX=14       ; 0 to 31
+RightShortY=16       ; 0 to 31
+RightLongX=14       ; 0 to 31
+RightLongY=16       ; 0 to 31
+LeftShortX=14       ; 0 to 31
+LeftShortY=16       ; 0 to 31
+LeftLongX=14       ; 0 to 31
+LeftLongY=16       ; 0 to 31

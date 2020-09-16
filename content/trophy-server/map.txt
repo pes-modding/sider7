@@ -1,0 +1,28 @@
+# trophy-server map
+# ~~~~~~~~~~~~~~~~~
+#
+# Format: tournament-id,tournament-id2,content-root-folder-path
+# Where:
+#   content-root-folder-path is relative to "content\trophy-server"
+#   tournament-id2 is which other tournament's trophy scenes you want to use for your tournament
+#
+# IMPORTANT: It is best to remap cups to cups and leagues to leagues,
+# otherwise the game gets a bit confused. For example, English Premier League (17)
+# can be remapped to Swiss League (117), and then the trophy ceremony will
+# be correctly displayed after the match where you win the league (if you do :-))
+#
+# (If you remap a league to a cup or vice versa, it will still work. For example,
+# you could remap EPL (17) to AFC Champions League (16). But the commentary during
+# trophy presentation may sound a bit strange, because the game will confuse
+# a league match with a cup match. Not a huge deal, but just be aware.)
+#
+# For reference, use doc/tournaments.txt provided with sider:
+# It has tournament ids for all tournaments in the game.
+
+
+86,43,"eng_community_shield"
+17,117,"eng_premier_league"
+23,4,"eng_fa_cup"
+
+7,1,"uefa_supercup"
+

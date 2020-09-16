@@ -1,0 +1,21 @@
+{
+	"events":{
+		"proceed":{
+			"to":"Exhibition/ExhibiTeamSel",
+			"go":"forward",
+			"clear":"all",
+			"fadeStart":"",
+			"fadeEnd":"do",
+			"bgType":"none"
+		}
+	},
+	"data":{
+		"type":"process",
+		"bgId":"",
+		"dialog":""
+	},
+	"binFile":{
+		"files":[
+		]
+	}
+}

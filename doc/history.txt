@@ -1,0 +1,139 @@
+Sider 6 Release History
+=======================
+
+
+August 8, 2020
+v6.3.9
+- fix for "set_stadium" event not firing for some leagues/cups
+
+
+July 17, 2020
+v6.3.8
+- can now change number of substitutions in any match
+
+
+June 6, 2020
+v6.3.7
+- support for 1.07.00 exe
+- new function in memory lib: safe_search
+
+
+April 22, 2020
+v6.3.6
+- rebuilt with modern compiler suite - Visual Studio 2019
+- dropping dependency on xinput1_3.dll
+- ctx.kits.get and ctx.kits.get_gk now return unicolor attributes
+- livecpk_data_ready event gets another parameter: cpk_filename
+
+
+March 6, 2020
+v6.3.5
+- bi-direction cycling through modules in overlay via gamepad
+- documentation corrections and updates
+
+
+March 5, 2020
+v6.3.4
+- support for 1.05.00 exe
+- bi-directional cycling through modules in overlay
+- improvement for "get_stadium_name" event - to better
+  work with the schedule bar in Master League
+
+
+February 25, 2020
+v6.3.3
+- bug-fix: a Lua module using "match" library could cause crashes
+  in some circumstances. This has been fixed now.
+
+
+February 14, 2020
+v6.3.2
+- corrections for kit attributes: ChestNumberY, NameY
+- bug-fix: non-ASCII filenames are supported now by audio lib
+- overlay toggle plays when toggled on/off by gamepad
+
+
+January 30, 2020
+v6.3.1
+- bug-fix: if overlay was disabled in sider.ini, then any attempt
+  to play a sound play audio lib would crash the game.
+  (Thanks predator002 for bug report!)
+- minor documentation fixes
+
+
+January 29, 2020
+v6.3.0
+- audio library to play music and sounds (MP3/WAV/FLAC)
+- all dependencies statically linked into sider.dll: no external DLLs needed
+- new HTML documentation
+- experimental match stats library
+
+
+January 9, 2020
+v6.2.5
+- support for 1.03.02 game exe
+- statically linking zlib 1.2.11
+
+
+December 19, 2019
+v6.2.4
+- support for PES 2020 Lite
+- new feature in memory library: memory.guard
+
+
+November 29, 2019
+v6.2.3
+- support for 1.02.02 game exe
+
+
+November 6, 2019
+v6.2.2
+- support for 1.02.01 game exe
+
+
+October 25, 2019
+v6.2.1
+- support for 1.02.00 game exe
+- small fix for "memory.search" function
+- caching logic simplified
+
+
+October 4, 2019 "Sputnik" release
+v6.2.0
+- support for kit manipulation (via "kits" table in context)
+- new "one-click launch" way of running the game with sider
+- performance optimizations and misc fixes
+
+
+October 2, 2019
+v6.1.2
+- support for 1.01.02 game exe
+
+
+September 20, 2019
+v6.1.1
+- trophy-server with example trophies
+- correction for "stadium_choice" event and context member
+
+
+September 13, 2019
+v6.1.0
+- updated to work with full game, demo is no longer supported
+  (last version compatible with the demo: 6.0.1)
+- free.side.select option support
+
+
+August 13, 2019
+v6.0.1
+- most of Lua scripting engine is supported (except for "kits"), including overlay
+- camera module with Fanview camera controls and replays on/off switch
+- new event: "set_match_settings" - allows to enable extra time and penalties,
+  as well as set difficulty to 6 (Legend?)
+
+
+August 2, 2019
+v6.0.0
+- support for setting number of match minutes to more than 5
+- LiveCPK
+
+

@@ -1,0 +1,98 @@
+diff --git a/soft/LuaJIT-2.0.5/src/lib_io.c b/soft/LuaJIT-2.0.5/src/lib_io.c
+index 9cdcfcf..fb0986b 100644
+--- a/soft/LuaJIT-2.0.5/src/lib_io.c
++++ b/soft/LuaJIT-2.0.5/src/lib_io.c
+@@ -24,6 +24,11 @@
+ #include "lj_ff.h"
+ #include "lj_lib.h"
+ 
++#if LJ_TARGET_WINDOWS
++#define UNICODE
++#include <windows.h>
++#endif
++
+ /* Userdata payload for I/O file. */
+ typedef struct IOFileUD {
+   FILE *fp;		/* File handle. */
+@@ -82,7 +87,41 @@ static IOFileUD *io_file_open(lua_State *L, const char *mode)
+ {
+   const char *fname = strdata(lj_lib_checkstr(L, 1));
+   IOFileUD *iof = io_file_new(L);
++#if LJ_TARGET_WINDOWS
++  unsigned int code_page = 65001; //utf-8
++  int n, wn;
++  wchar_t *wide_fname;
++  wchar_t *wide_mode;
++  /* try convert filename to wide-char */
++  n = (int)strlen(fname);
++  wn = MultiByteToWideChar(code_page, 0, fname, n, NULL, 0);
++  if (wn == 0) {
++    iof->fp = fopen(fname, mode);
++    if (iof->fp == NULL)
++      luaL_argerror(L, 1, lj_str_pushf(L, "%s: %s", fname, strerror(errno)));
++    return iof;
++  }
++  wide_fname = (wchar_t*)calloc((wn+1)*sizeof(wchar_t),1);
++  MultiByteToWideChar(code_page, 0, fname, n, wide_fname, wn);
++  /* convert mode to wide-char */
++  n = (int)strlen(mode);
++  wn = MultiByteToWideChar(code_page, 0, mode, n, NULL, 0);
++  if (wn == 0) {
++    free(wide_fname);
++    iof->fp = NULL;
++    luaL_argerror(L, 1, lj_str_pushf(L, "%s: %s", fname, "mode is not a valid UTF-8 string"));
++    return iof;
++  }
++  wide_mode = (wchar_t*)calloc((wn+1)*sizeof(wchar_t),1);
++  MultiByteToWideChar(code_page, 0, mode, n, wide_mode, wn);
++  /* open file */
++  iof->fp = _wfopen(wide_fname, wide_mode);
++  /* free the buffers */
++  free(wide_fname);
++  free(wide_mode);
++#else
+   iof->fp = fopen(fname, mode);
++#endif
+   if (iof->fp == NULL)
+     luaL_argerror(L, 1, lj_str_pushf(L, "%s: %s", fname, strerror(errno)));
+   return iof;
+@@ -407,7 +446,39 @@ LJLIB_CF(io_open)
+   GCstr *s = lj_lib_optstr(L, 2);
+   const char *mode = s ? strdata(s) : "r";
+   IOFileUD *iof = io_file_new(L);
++#if LJ_TARGET_WINDOWS
++  unsigned int code_page = 65001; //utf-8
++  int n, wn;
++  wchar_t *wide_fname;
++  wchar_t *wide_mode;
++  /* try to convert filename to wide-char */
++  n = (int)strlen(fname);
++  wn = MultiByteToWideChar(code_page, 0, fname, n, NULL, 0);
++  if (wn == 0) {
++    iof->fp = fopen(fname, mode);
++    return iof->fp != NULL ? 1 : luaL_fileresult(L, 0, fname);
++  }
++  wide_fname = (wchar_t*)calloc((wn+1)*sizeof(wchar_t),1);
++  MultiByteToWideChar(code_page, 0, fname, n, wide_fname, wn);
++  /* convert mode to wide-char */
++  n = (int)strlen(mode);
++  wn = MultiByteToWideChar(code_page, 0, mode, n, NULL, 0);
++  if (wn == 0) {
++    free(wide_fname);
++    iof->fp = NULL;
++    luaL_argerror(L, 1, lj_str_pushf(L, "%s: %s", fname, "mode is not a valid UTF-8 string"));
++    return luaL_fileresult(L, 0, fname);
++  }
++  wide_mode = (wchar_t*)calloc((wn+1)*sizeof(wchar_t),1);
++  MultiByteToWideChar(code_page, 0, mode, n, wide_mode, wn);
++  /* open file */
++  iof->fp = _wfopen(wide_fname, wide_mode);
++  /* free the buffers */
++  free(wide_fname);
++  free(wide_mode);
++#else
+   iof->fp = fopen(fname, mode);
++#endif
+   return iof->fp != NULL ? 1 : luaL_fileresult(L, 0, fname);
+ }
+ 

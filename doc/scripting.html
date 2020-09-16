@@ -1,0 +1,1539 @@
+<html>
+<head>
+<title>Sider 6 Lua Module Programmers Guide</title>
+<style>
+body { margin-left: 1em; margin-right: 1em; margin-bottom: 2em; }
+body,h1,h2,h3,h4,h5,p,ol,ul,li,td,th { font-family: sans-serif; }
+h1 { margin-bottom: 0; color: #000; }
+h4 { color: #660066; margin-top: 0.1em; margin-bottom: 0.1em; }
+h3 { color: #113399; text-decoration: underline; margin-top: 1.8em; }
+.warn { color: #660000; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #880000; border-right: 0.5em solid #880000; background-color: #ccbbbb; }
+.gwarn { color: #666666; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #888888; border-right: 0.5em solid #888888; background-color: #cccccc; }
+.note { color: #336600; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #336600; border-right: 0.5em solid #336600; background-color: #bbccbb; }
+pre { color: #003366; padding: 0.3em 0.5em 0.3em 0.5em; background-color: #dde5ff; font-family: monospace;
+    border-top: solid 1px #4477aa; font-size: 0.9em;
+}
+.user { font-weight: bold; color: #2255aa; }
+.soft { font-weight: bold; color: #336600; }
+.pathname { font-weight: normal; font-family: monospace; color: #336600; }
+.file { font-weight: normal; font-family: monospace; color: #660099; }
+.func { font-weight: bold; font-family: monospace; color: #660099; margin-top: 1.5em; margin-bottom: 0.6em; }
+.desc { margin-top: 0.6em; }
+.kitattr { font-weight: normal; font-family: monospace; color: #000099; }
+.evt { font-weight: bold; font-family: monospace; }
+.evthdr { padding: 0 0 0 0.5em; border-left: 0.5em solid #bbb; background-color: #eee; margin-top: 1.5em; }
+.auf { font-weight: bold; color: #336600; }
+a { color: #33f; }
+a.top { float: right; padding-top: 1em; }
+th { text-align: left; background-color: #d0ccdd; }
+th,td { border-top: 1px solid #888; padding: 0.2em 0.5em 0.5em 0.5em; }
+.last { border-bottom: 1px solid #888; }
+table.inputs { margin-left: 3em; }
+table.inputs tr th,td { border-left: 1px solid #888; }
+table.inputs tr th { font-weight: bold; font-family: sans-serif; background-color: #eee; color: #660099;
+    border-top: 1px solid #888; border-bottom: 1px solid #888; }
+table.inputs tr td { font-family: sans-serif; border-top: none; border-bottom: 1px solid #888; }
+table.inputs tr td.right,th.right { border-right: 1px solid #888; }
+</style>
+</head>
+
+<body>
+<h1>Sider 6 Lua Module Programmers Guide</h1>
+<h4>For sider.dll version: 6.3</h4>
+
+<p>
+<ol>
+<li><a href="#intro">Introduction</a></li>
+<li><a href="#module">Module structure</a></li>
+<li><a href="#context">Context object</a></li>
+<li><a href="#events">Supported events</a></li>
+<li><a href="#logging">Logging</a></li>
+<li><a href="#env">Module environment</a></li>
+<li><a href="#memory">Memory library</a></li>
+<li><a href="#zlib">Zlib library</a></li>
+<li><a href="#audio">Audio library</a></li>
+<li><a href="#match">Match library</a></li>
+</ol>
+</p>
+
+<a class="top" href="#">Top</a>
+<a name="intro">
+<h3>1. Introduction</h3>
+</a>
+
+<p>The main idea here is to provide a safe and flexible way to
+extend Sider functionality. It allows modders to alter many
+aspects of game logic, and load all sorts of extra content.
+Visual and gameplay tweaks are possible too.</p>
+
+<p>Instead of offering a C interface, where the programmers would need
+to write a DLL, i'm a taking a different approach here and trying to
+design a system, where extension modules are written in Lua. A module
+would typically initialize itself by registering for certain events,
+and then Sider will call the module functions, when those events
+occur later in the game.</p>
+
+<p>Lua is by now a well-established language of choice for scripting
+support in games, used all over the gaming industry. Most famous
+example is probably WarCraft, but many modern games use it, including
+Pro Evolution Soccer itself.
+To boost the performance, Sider uses a just-in-time compiler for Lua
+called LuaJIT (<a href="https://luajit.org">https://luajit.org</a>), written
+by Mike Pall. LuaJIT is a truly brilliant piece
+of software. It is 100% compatible with Lua 5.1, and it is super fast,
+often approaching and sometimes exceeding the speed of C code.</p>
+
+<p>After reading this guide, the next step is to study the example (and
+non-example) modules, which are provided with this release of Sider.
+Find them in the "modules" directory.</p>
+
+<a class="top" href="#">Top</a>
+<a name="module">
+<h3>2. Module structure</h3>
+</a>
+
+<p>If you are familiar with Lua and how modules are typically organized
+then this will make full sense to you. If are you new to Lua, i would
+strongly recommend reading "Programming in Lua" by Roberto Ierusalimschy.
+2nd edition covers Lua 5.1, which is the version of the language used
+by Sider. However, any other edition of the book will be just as helpful.</p>
+
+<p>In any case, the module organization is pretty simple:
+<ol>
+<li>Your need to create a new table</li>
+<li>Provide a function, called "<b>init</b>" in that table, where you need to
+do any initialization logic for the module and register for the events
+your module is interested in.</li>
+<li>Return that table as the last statement</li>
+</ol>
+
+<b>Example module: test.lua</b>
+
+<pre>
+local m = {}
+
+function m.init(ctx)
+    log("Hello, world!")
+end
+
+return m
+</pre>
+
+<p>As you have already guessed, this module doesn't really do much. But it
+is a valid module, and can be loaded by Sider. For that you need to save
+it as <i>{something}.lua</i> file in the "modules" folder, inside sider. Let's
+assume that you named it: <span class="file">test.lua</span>. Then, you must also enable it in
+<span class="file">sider.ini</span>, like this:</p>
+
+<pre>
+lua.module = "test.lua"
+</pre>
+
+<p>If you now run the game, your module will get loaded by Sider, and then
+the "init" function will be called, so you should see a "Hello, world!"
+message in <span class="file">sider.log</span>.
+If you made a mistake and your module has a syntax error, for example,
+or some other problem, don't panic, instead open <span class="file">sider.log</span> with Notepad
+(or any text editor) and look for an error message there. It will explain
+where (on which line of your script) and what sort of problem occurred.</p>
+
+<p class="note">
+VERY IMPORTANT NOTE:<br />
+File encoding <b>must be UTF-8</b>. This is vital, if you are
+using non-latin characters in the strings in the module code - for example,
+in paths. If you only have latin-1 chars, then ANSI is ok too.
+</p>
+
+<p>Let's now see how you can make a more useful module. First step for that
+is to understand the context object (ctx).</p>
+
+
+<a class="top" href="#">Top</a>
+<a name="context">
+<h3>3. Context object</h3>
+</a>
+
+<p>Context object is what Sider knows about the current state
+of the game. As more scripts/modules are created by the community
+the context object will probably also change, and include more and more
+information about the game.</p>
+
+<p>As of 6.3.0 release, the context object has the following:</p>
+
+<p>
+<table cellpadding="0" cellspacing="0">
+<tr>
+<th>ctx.home_team</th>
+<td>id of the home team of the current match, after
+it is selected in the exhibition match, or the next
+match is determined in the league mode.</td>
+</tr>
+<tr>
+<th>ctx.away_team</th>
+<td>id of the away team of the current match, after
+it is selected in the exhibition match, or the next
+match is determined in the league mode.</td>
+</tr>
+<tr>
+<th>ctx.tournament_id</th>
+<td>numeric id of the current tournament. See
+doc/tournament.txt file for the list
+of ids for all of the game's tournaments.</td>
+</tr>
+<tr>
+<th>ctx.match_id</th>
+<td>some sort of number, which seems to indicate where
+in the season you currently are. However, the exact
+meaning of this id is unclear. Maybe you can figure
+it out and tell me ;-)</td>
+</tr>
+<tr>
+<th>ctx.match_leg</th>
+<td>set to 1 or 2, if this is 1st leg or 2nd leg of
+a two-legged knock-out match.</td>
+</tr>
+<tr>
+<th>ctx.match_info</th>
+<td>meaning of this field varies, depending on the type of tournament:
+<ul>
+<li>league: number of league matches already played</li>
+<li>cup/play-off:<br />
+<ul>
+<li>46 - first round of play-off,</li>
+<li>47 - second round of play-off,</li>
+<li>51 - quaterfinal,</li>
+<li>52 - semifinal,</li>
+<li>53 - final</li>
+</ul>
+</li>
+You can use this together with ctx.tournament_id to
+identify a final match of a particular tournament.
+</td>
+</tr>
+<tr>
+<th>ctx.stadium</td>
+<td>numeric id of the stadium that will be used (or was
+last used, if the stadium for the next match hasn't
+been chosen yet by the game logic)</td>
+</tr>
+<tr>
+<th>ctx.stadium_choice</th>
+<td>This field is set when the game is in one of the
+exhibition modes, and the stadium is allowed to
+be selected via the menu. Once the actual final
+selection of the stadium is made (right after the
+"<b>set_stadium</b>" event fires), the "stadium_choice"
+field get removed from the context.<br /><br />
+Special values:
+<ul>
+<li>65533 - home stadium</li>
+<li>65534 - random stadium</li>
+<li>65535 - not chosen yet</li>
+</ul>
+</td>
+</tr>
+<tr>
+<th>ctx.timeofday</th>
+<td>The values are: 0 - day, 1 - night. Same as with
+stadium, it represents the time of day of the coming
+match, or the last one, if the stadium isn't set yet
+for the next match.</td>
+</tr>
+<tr>
+<th>ctx.season</th>
+<td>The values are: 0 - summer, 1 - winter.</td>
+</tr>
+<tr>
+<th>ctx.weather</th>
+<td>The values are: 0 - fine, 1 - rainy, 2 - snowy</td>
+</tr>
+<tr>
+<th>ctx.weather_effects</th>
+<td>The known values are:
+<ul>
+<li>2 - enforce weather effects (rain/snow falling)</li>
+</ul>
+</td>
+</tr>
+<tr>
+<th>ctx.match_time</th>
+<td>Duration of the match in minutes.</td>
+</tr>
+<tr>
+<th>ctx.difficulty</th>
+<td>Difficulty that was chosen: 0 - Beginner, 1 - Amateur, ...  5 - All-star, 6 - Legend</td>
+</tr>
+<tr>
+<th>ctx.extra_time</th>
+<td>0/1 flag to indicate if extra time will be played</td>
+</tr>
+<tr>
+<th>ctx.penalties</th>
+<td>0/1 flag to indicate if penalty shootout will be played</td>
+</tr>
+<tr>
+<th>ctx.substitutions</th>
+<td>number of substitutions allowed in normal time</td>
+</tr>
+<tr>
+<th>ctx.substitutions_in_extra_time</th>
+<td>number of substitutions allowed in extra time</td>
+</tr>
+<tr>
+<th class="last">ctx.kits</th>
+<td class="last">table of functions for kit manipulation. (See more details further down)</td>
+</tr>
+</table>
+
+<p>The context object also contains a register function, which has the
+following signature:
+
+<p class="func">
+ctx.register(event_name, handler_function)
+</p>
+
+<p>The event_name parameter is a string, which identifies a particular
+event. The handler_function should be a function in your Lua module,
+which will be called when the corresponding event happens. Parameters
+vary depending on the event - see the next section for details on all
+supported events and their handler signatures</p>
+
+<p>The idea of the context object is that in your handler functions, your
+code will make decisions on what to do, using the information in the
+context.</p>
+
+
+<h3>3.1. ctx.kits</h3>
+
+<p>It is a table of helper functions to manipulate kits (uniforms).</p>
+
+<p class="warn">IMPORTANT NOTE:<br />
+kit operations only work for "licensed" teams, in other
+words, for those that have real kits, not ones made in game editor.
+If your team is unlicensed, use <b>Kit Studio</b> or <b>Team Licencer</b>
+from SimpleTools collection (both tools by <span class="user">zlac</span>) to convert it
+to a licensed team.</p>
+
+<p>The table contains the following functions:</p>
+
+<p class="func">
+ctx.kits.get_current_team(home_or_away)
+</p>
+
+<p class="desc">Returns the team id for the currently chosen home or away team -
+depending on the parameter that you pass in:
+<ul>
+<li>0 - home team</li>
+<li>1 - away team</li>
+</ul>
+</p>
+
+<p class="func">
+ctx.kits.get_current_kit_id(home_or_away)
+</p>
+
+<p class="desc">Returns the currently chosen player kit_id for home or away team -
+depending on the parameter that you pass in:
+<ul>
+<li>0 - home team</li>
+<li>1 - away team</li>
+</ul>
+</p>
+
+<p class="func">
+ctx.kits.get(team_id, kit_id)
+</p>
+
+<p class="desc">Returns a table of attributes for a player kit for specified team
+and kit_id. The kit_id can range from 0 to 9. The returned table
+contains all attributes for the requested kit - things like:
+<span class="kitattr">Collar</span>,
+<span class="kitattr">KitModel</span>,
+<span class="kitattr">KitFile</span>,
+<span class="kitattr">BackNumbersFile</span>, and so for. We call
+this collection of attributes a "kit config".</p>
+
+<p class="func">
+ctx.kits.set(team_id, kit_id, kit_cfg, home_or_away)
+</p>
+
+<p class="desc">Sets the kit attributes to the values provided in kit_cfg table,
+for the chosen team and kit. The last parameter is optional: if
+you specify it, then use 0 - for home team, 1 - for away team,
+and sider will update parts of team info in memory that control
+the color of radar. This allows for correct radar colors, and
+also for proper color-matching, when kits are initially chosen
+by the game logic, in such a way that they don't clash.</p>
+
+<p class="func">
+ctx.kits.get_gk(team_id)
+</p>
+
+<p class="desc">Returns a table of attributes for a goalkeeper kit for specified team
+The returned table contains all attributes for the kit, like it is
+with a player kit.</p>
+
+<p class="func">
+ctx.kits.set_gk(team_id, kit_cfg)
+</p>
+
+<p class="desc">Sets the kit attributes to the values provided in kit_cfg table,
+for the chosen team and goalkeeper kit.</p>
+
+<p class="func">
+ctx.kits.refresh(home_or_away)
+</p>
+
+<p class="desc">Forces a refresh of the kit for either home or away team -
+depending on the value of the parameter:
+<ul>
+<li>0 - home team</li>
+<li>1 - away team</li>
+</ul>
+</p>
+
+<a class="top" href="#">Top</a>
+<a name="events">
+<h3>4. Supported events</h3>
+</a>
+
+<p class="evthdr">
+Event name: <span class="evt">"livecpk_make_key"</span><br />
+Handler function: <span class="func">f(ctx, filename)</span><br />
+Return value is expected to be a <span class="file">string</span> or <span class="file">nil</span>.
+</p>
+
+<p>This event occurs when the game needs to find out some information
+about the file, specified by relative filename. Maybe the game needs
+to create a buffer, or it needs to determine the filesize, or something
+else. Your handler function is expected to return a string key that
+will be used for caching of "livecpk_get_filepath". You can just
+return filename as the key, without any changes, or return nil -
+which will result in the same outcome. But sometimes, you need to make
+a different key, because the context has some additional information
+that is important.</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"livecpk_get_filepath"</span><br />
+Handler function: <span class="func">f(ctx, filename, key)</span><br />
+Return value is expected to be a <span class="file">string</span> or <span class="file">nil</span>.
+</p>
+
+<p>This event is related to "livecpk_make_key".
+It works like this: after the key is returned by livecpk_make_key
+handler, sider needs to know which actual file (absolute path) needs
+to be loaded for this key. So your handler function is expected to
+return a full absolute filename. Sider will cache this absolute filename
+using the key returned by livecpk_make_key, and the next time this file
+is needed, the livecpk_get_filepath event will NOT fire. (This is
+again done for performance reasons so that we don't unnecessarily seek
+the disk).</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"livecpk_rewrite"</span><br />
+Handler function: <span class="func">f(ctx, filename)</span><br />
+Return value is expected to be a <span class="file">string</span> or <span class="file">nil</span>.
+</p>
+
+<p>Allows the filename to be rewritten to another. This is a very
+powerful, but also quite dangerous function, if you are not careful.
+If you rewrite the filename to something that does not exist in
+LiveCPK roots or in download/data CPKs, and none of your modules
+provide the content, then the game will be unable to load the file,
+which can lead to different behaviours, depending on type of file being
+loaded. If it's a DDS texture, then usually nothing bad happens -
+you just get a white texture. But if it is a model file - you will
+get an endless loop, where loading indicator will keep spinning
+forever, or the game can just crash. So, be careful,
+and don't rewrite blindly ;-)</p>
+
+<p>See "kitrewrite.lua" module for an example of rewrite usage: it is
+loading a 2nd player kit instead of a 1st goalkeeper kit, so your
+goalkeepers end up wearing 2nd kit of outfield players.</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"livecpk_data_ready"</span><br />
+Handler function: <span class="func">f(ctx, filename, data, size, total_size, offset, cpk_filename)</span><br />
+Return value: <span class="file">nil</span>.
+</p>
+
+<p>Provides a pointer to the buffer in memory that have just
+been filled with data. Here is what the parameters mean:
+<ul>
+<li>ctx: context object</li>
+<li>filename: the relative pathname of the file (For example, "common\pesdb\etc\Team.bin")</li>
+<li>data: address of the buffer in memory where the data was loaded</li>
+<li>size: buffer length in bytes</li>
+<li>total_size: total size (in bytes) of the file</li>
+<li>offset: offset in file before the read happened</li>
+<li>cpk_filename: name of the CPK that the file was read from (if known)</li>
+</ul>
+</p>
+
+<p>See <span class="file">filedump.lua</span>,
+<span class="file">tracer.lua</span> and
+<span class="file">facedump.lua</span> modules for
+example usage of this event. This is an advanced feature, which you
+will need if you wanted to examine the data that the game is about
+to use. Care must be taken to not leak memory. Also, be aware that some
+large files are not read all-at-once. For instance, music from
+BGM.awb is accessed in small chunks - typically 0x8000 bytes in size,
+which is enough for continuous playback of the song. In such situation,
+you can use <span class="func">offset</span> and <span class="func">total_size</span> parameters to check what part
+of the file was read.</p>
+
+<p>Another possible use for this event, is tracking of what is happening in the game.
+For example, when match is paused, a particular JSON file is loaded, and then when
+the match resumes, another JSON file is loaded by the game. You can track and use
+that information in your Lua scripts to trigger some additional logic, for example,
+to play a sound file, or do some other task</p>
+
+<p>Here is an example module that uses <span class="evt">"livecpk_data_ready"</span> event
+to log every file as it is loaded by the game:
+
+<pre>
+local m = {}
+
+function m.data_ready(ctx, filename, data, size, total_size, offset, cpk_filename)
+    log(filename)
+end
+
+function m.init(ctx)
+    ctx.register("livecpk_data_ready", m.data_ready)
+end
+
+return m
+</pre>
+</p>
+
+
+<p class="evthdr">
+Event name: <span class="evt">"set_teams"</span><br />
+Handler function: <span class="func">f(ctx, home_team, away_team)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
+
+<p>This event fires after both home and away teams are determined -
+either during the team selection in exhibition game, or when the next
+match becomes known in a league or a cup mode (League, Master League,
+UCL, Europa League, etc.)
+The team ids are also set as "home_team" and "away_team" fields in
+the context object so that they can be used later, if needed.</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"set_kits"</span><br />
+Handler function: <span class="func">f(ctx, home_kit_info, away_kit_info)</span><br />
+Return value expected: <span class="file">nil</span> or table or two tables.
+</p>
+
+<p>This event fires when player kits are chosen for both home and away teams -
+The "home_kit_info" and "away_kit_info" contain kit attributes for home and
+away player kits respectively. The handler function can modify the kit attributes
+at this point by returning tables - one for home team, another - for away team,
+containing the changed attributes. (For more information on this, consult
+the "Kitserver 2020" thread on EvoWeb forums)</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"set_match_time"</span><br />
+Handler function: <span class="func">f(ctx, minutes)</span><br />
+Return value expected: <span class="file">nil</span> or <span class="file">integer</span>
+</p>
+
+<p>This event occurs, when the game sets the mach duration. If your handler
+function returns an integer, then this value will be used as the match
+time in minutes. This way you can accelerate or slow down the matches
+beyound the allowed 5-30 minute range. See matchtime.lua - for an example
+of such script.</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"set_stadium_choice"</span><br />
+Handler function: <span class="func">f(ctx, stadium_id)</span><br />
+Return value expected: <span class="file">nil</span> or <span class="file">stadium_id</span>
+</p>
+
+<p>This event fires, when the game prepares to display the stadium image
+or when it is entering pre-game menus of non-exhibition modes. In addition
+to the actual id of the stadium chosen, the "stadium_id" parameter may have
+the following special values:
+<ul>
+<li>65533 : home stadium</li>
+<li>65534 : random stadium</li>
+</ul>
+</p>
+
+<p>You handler function can change it, if it returns an integer value instead of <span class="file">nil</span>.
+This integer value can either be a stadium id, or one of the following special
+values, mentioned above.</p>
+
+<p class="note">NOTE: the final stadium selection isn't actually made, until after the
+"set_stadium" event. So, if you want to change the stadium, or see what
+was eventually chosen as random/home stadium, then you will need to also register
+for the "set_stadium" event.</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"set_stadium"</span><br />
+Handler function: <span class="func">f(ctx, options)</span><br />
+Return value expected: <span class="file">nil</span> or number or table
+</p>
+
+<p>This event fires, when the stadium settings are chosen for the upcoming
+match. The "options" parameter is a Lua table which contains the following
+keys: "stadium", "timeofday", "weather", "weather_effects", "season".
+Each of these has an integer value, as the game uses:
+<ul>
+<li>stadium: the id of the stadium</li>
+<li>timeofday: 0 - day, 1 - night</li>
+<li>weather: 0 - fine (sunny), 1 - rain, 2 - snow</li>
+<li>weather_effects: 2 - enforce falling rain/snow, other values - unknown</li>
+<li>season: 0 - summer, 1 - winter</li>
+</ul>
+</p>
+
+<p>You handler function can either return <span class="file">nil</span>, which means that other modules
+can receive the event and process it. Or, the handler can return an stadium
+id - an integer - to switch the stadium to another one. Be careful though:
+sider doesn't check for correctness of values, so if you switch to a
+non-existent stadium, the game will probably crash or go into infinite
+"loading" loop. For an example usage - see stadswitch.lua module.
+
+( For backwards compatibility, returning a table like this:
+<tt>{ stadium = <i>stadium-id</i> }</tt> is also supported. However, any other keys in
+that table will be ignored. )
+
+<p>To change weather, timeofday and season - use a different event, called:
+"set_conditions", which is documented next.
+</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"set_conditions"</span><br />
+Handler function: <span class="func">f(ctx, options)</span><br />
+Return value expected: <span class="file">nil</span> or table
+</p>
+
+<p>This event fires, when the stadium settings are chosen for the upcoming
+match. The "options" parameter is a Lua table which contains the following
+keys: "stadium", "timeofday", "weather", "weather_effects", "season".
+Each of these has an integer value, as the game uses:
+<ul>
+<li>stadium: id of the stadium</li>
+<li>timeofday: 0 - day, 1 - night</li>
+<li>weather: 0 - fine (sunny), 1 - rain</li>
+<li>weather_effects: 2 - enforce rain falling, other values - unknown</li>
+<li>season: 0 - summer, 1 - winter</li>
+</ul>
+</p>
+
+<p>You handler function can either return <span class="file">nil</span>, which means that other modules
+can receive the event and process it. Or, the handler can return a table
+of options, which are either modified or not. Returning a table of options
+stops further propagation of the event. You <b>cannot</b> change the stadium id -
+for that use "set_stadium" event. But you can change any of the other
+three settings: just assign them different values.
+For an example usage - see <span class="file">stadswitch.lua</span> module.
+</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"set_match_settings"</span><br />
+Handler function: <span class="func">f(ctx, options)</span><br />
+Return value expected: <span class="file">nil</span> or table
+</p>
+
+<p>This event fires, after the match settings had been chosen for the upcoming
+match. The "options" parameter is a Lua table which contains the following
+keys: "difficulty", "extra_time", "penalties", "substitutions", "substitutions_in_extra_time".
+Each of these has an integer value, as the game uses:
+<ul>
+<li>difficulty: 0 - Beginner, 1 - Amateur, 2 - Regular, 3 - Professional,
+    4 - Top Player, 5 - Super Star, 6 - Legend</li>
+<li>extra_time: 0 - off, 1 - on</li>
+<li>penalties: 0 - off, 1 - on</li>
+<li>substitutions: number of subs allowed in normal time</li>
+<li>substitutions_in_extra_time: number of subs allowed in extra time</li>
+</ul>
+</p>
+
+<p>You handler function can either return <span class="file">nil</span>, which means that other modules
+can receive the event and process it. Or, the handler can return a table
+of options, which are either modified or not. Returning a table of options
+stops further propagation of the event.
+For an example usage - see <span class="file">matchset.lua</span> module.
+</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"after_set_conditions"</span><br />
+Handler function: <span class="func">f(ctx)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
+
+<p>This event fires after "set_conditions". It doesn't allow the handler
+to change anything, but it does provide the context object so that the
+modules can react in whatever way they want.</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"get_ball_name"</span><br />
+Handler function: <span class="func">f(ctx, ballname)</span><br />
+Return value expected: <span class="file">nil</span> or string
+</p>
+
+<p>This event fires, when the game prepares to display the ball name.
+Your handler function can change it, if it returns a string instead of nil.
+The string needs to be in UTF-8 encoding to correctly render non-ASCII
+characters.</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"get_stadium_name"</span><br />
+Handler function: <span class="func">f(ctx, stadium_name, stadium_id, schedule_entry)</span><br />
+Return value expected: <span class="file">nil</span> or string
+</p>
+
+<p>This event fires, when the game prepares to display the stadium name.
+You handler function can change it, if it returns a string instead of nil.
+(The "stadium_id" parameter is provided to handler function only as additional
+information - for which stadium the name is being read/modified)
+The string needs to be in UTF-8 encoding to correctly render non-ASCII
+characters.</p>
+
+<p>The last parameter - <span class="func">schedule_entry</span> - is new in sider 6.3.4. It is set to
+<span class="file">nil</span> in all usual scenarios where stadium name is chosen, except for the case when
+a Master League screen shows a small fragment of the schedule (schedule bar) with
+the 4 matches: 1 that just happened, and 3 in the future. This is new in PES 2020
+Master League (was not there in PES 2019). In this use-case the "get_stadium_name" event fires for each of
+those 4 matches, and the <span class="func">schedule_entry</span> parameter is a table that contains
+information about the corresponding match as its keys:
+<ul>
+<li>tournament_id</li>
+<li>match_info</li>
+<li>home_team</li>
+<li>away_team</li>
+</ul>
+</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"trophy_rewrite"</span><br />
+Handler function: <span class="func">f(ctx, tournament_id)</span><br />
+Return value expected: <span class="file">nil</span> or number
+</p>
+
+<p>This event fires before the game checks if trophy scenes need to be shown
+before (and after) the match. This is a specialized event, and is probably
+not very useful for modules other than "trophy.lua". The "trophy.lua"
+uses to enforce trophy scenes from specific tournaments. This makes it
+possible to have trophy celebrations for tournaments that do not have
+them in the original game content. (See <span class="file">trophy.lua</span>, if you are really
+interested in how this works)</p>
+
+
+<p class="evthdr">
+Event name: <span class="evt">"overlay_on"</span><br />
+Handler function: <span class="func">f(ctx)</span><br />
+Return values (3) expected: string, string, table
+</p>
+
+<p>
+<a href="cap4.jpg"><img src="cap4.jpg" width="100%"/></a>
+</p>
+
+<p>All return values can be <span class="file">nil</span>, and also the handler may return three or two,
+or one, or not return anything at all.
+<ul>
+<li>1st return value: text to display</li>
+<li>2nd return value: full filename of the image to display</li>
+<li>3rd return value: table with layout options</li>
+</ul>
+</p>
+
+<p>When the overlay is on, and the current Lua module is in control of the
+overlay, this event fires once for each frame that is displayed by the game engine
+(So, normally - 60 times per second). The returned string is what will be
+displayed by the overlay. The logic that generates this string should not be
+too heavy: too much processing may affect the frame rate.
+See examples in modules: <span class="file">overdemo.lua</span> and <span class="file">etrace.lua</span>
+</p>
+
+<p>The text and image are displayed side by side: text - on the left,
+image - on the right. The layout options table allows to specify some
+formatting for the image. The following ones are supported:</p>
+
+<ul>
+<li>"<b>image_width</b>" : sets the width of the image on screen</li>
+<ul>
+<li>values &gt; 1 will be interpreted as desired width in pixels</li>
+<li>values &lt; 1 will be interpreted as fraction of the total screen width.</li>
+</ul>
+<li>"<b>image_height</b>": sets the height of the image on screen
+<ul>
+<li>values &gt; 1 will be interpreted as desired height in pixels</li>
+<li>values &lt; 1 will be interpreted as fraction of the total screen height.</li>
+</ul>
+<li>"<b>image_aspect_ratio</b>": a floating point number (width/height).<br />
+This option allows to enforce aspect ratio that is
+different from the source image. This value is NOT
+used if both <b>image_width</b> and <b>image_height</b> are specified.</li>
+<li>"<b>image_hmargin</b>": whitespace margin in pixels to be placed to the left and to
+the right of the image.</li>
+<li>"<b>image_vmargin</b>": whitespace margin in pixels to be placed to the top and to
+the bottom of the image.</li>
+</ul>
+
+<p>Final dimensions of the image on screen are calculated using two of the three
+options: "image_width", "image_height", "image_aspect_ratio" - in this order
+of priority. If only 1 (or none of the three) are specified, then a default
+width of 0.1 of total screen width is assumed, and the original aspect ratio
+of the image is used to calculate the height.</p>
+
+<p>Transparency of overlay images can be controlled by <b>overlay.image-alpha-max</b>
+settings in <span class="file">sider.ini</span>. This setting affects all modules and cannot be changed
+at runtime. See <a href="readme.html">readme.html</a> for details on how this settings works.
+</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"key_down"</span><br />
+Handler function: <span class="func">f(ctx, vkey)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
+
+<p>When the overlay is on, and the current Lua module is in control of the
+overlay, this event fires when user presses down any key on the keyboard. The
+so-called "virtual key code" will be passed as the value of "vkey" parameter.
+Your function can that take appropriate action, if it wants to react to
+such key events. A combination of <span class="evt">"overlay_on"</span> and <span class="evt">"key_down"</span> events can
+be used to build simple UIs in the overlay itself.
+See example of such UI in <span class="file">camera.lua</span></p>
+
+<p class="evthdr">
+Event name: <span class="evt">"key_up"</span><br />
+Handler function: <span class="func">f(ctx, vkey)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
+
+<p>When the overlay is on, and the current Lua module is in control of the
+overlay, this event fires when user releases a key on the keyboard. The
+so-called "virtual key code" will be passed as the value of "vkey" parameter.
+Your function can that take appropriate action, if it wants to react to
+such key events. (Typically, you would want to handle this event, if your
+module needs to avoid the standard "autorepeat" mechanism, where the
+operating system repeats "key_down" events when the key is held down.
+For <span class="evt">"key_up"</span> there is no autorepeat.)</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"gamepad_input"</span><br />
+Handler function: <span class="func">f(ctx, inputs)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
+
+<p>When the overlay is on, and the current Lua module is in control of the
+overlay, this event fires when user presses or releases a button, or moves
+a stick or d-pad of the game controller. (If you have multiple controllers
+attached, only one will generate these input events). The "inputs" parameter
+is always a table containing at least one, but possibly more than one mapping
+of: input-name --&gt; input-value. The "input-name" is a symbolic name that
+identifies the source of input: a button, stick, d-pad. See the following
+table for all possible combinations:</p>
+
+<p>
+<table class="inputs" cellpadding="0" cellspacing="0">
+<tr><th>input</th><th>input-name</th><th class="right">input-values</th></tr>
+<tr><td>Button 0            </td><td>A          </td><td class="right">0,1</td></tr>
+<tr><td>Button 1            </td><td>B          </td><td class="right">0,1</td></tr>
+<tr><td>Button 2            </td><td>X          </td><td class="right">0,1</td></tr>
+<tr><td>Button 3            </td><td>Y          </td><td class="right">0,1</td></tr>
+<tr><td>Button 4            </td><td>LB         </td><td class="right">0,1</td></tr>
+<tr><td>Button 5            </td><td>RB         </td><td class="right">0,1</td></tr>
+<tr><td>Button 6            </td><td>START      </td><td class="right">0,1</td></tr>
+<tr><td>Button 7            </td><td>BACK       </td><td class="right">0,1</td></tr>
+<tr><td>Button 8            </td><td>LT         </td><td class="right">0,1</td></tr>
+<tr><td>Button 9            </td><td>RT         </td><td class="right">0,1</td></tr>
+<tr><td>Button 10 (LS push) </td><td>LS         </td><td class="right">0,1</td></tr>
+<tr><td>Button 11 (RS push) </td><td>RS         </td><td class="right">0,1</td></tr>
+<tr><td>LS (left/right)     </td><td>LSx        </td><td class="right">-1,0,1</td></tr>
+<tr><td>LS (up/down)        </td><td>LSy        </td><td class="right">-1,0,1</td></tr>
+<tr><td>RS (left/right)     </td><td>RSx        </td><td class="right">-1,0,1</td></tr>
+<tr><td>RS (up/down)        </td><td>RSy        </td><td class="right">-1,0,1</td></tr>
+<tr><td>D-pad               </td><td>DPAD       </td><td class="right">0,1,9,8,10,2,6,4,5</td></tr>
+</table>
+</p>
+
+<ul>
+<li>For <b>buttons</b>, 0: pressed, 1: pressed.</li>
+<li>For <b>sticks</b>,
+<ul>
+<li>horizontal: -1: left, 0:middle, 1:right</li>
+<li>vertical: -1: down, 0:middle, 1:up</li>
+</ul>
+</li>
+<li>For <b>D-pad</b>, 0: not pressed, 1:up, 2:down, 4:left, 8:right,
+5:up/left, 6:down/left, 10:down/right, 9:up/right</li>
+</ul>
+
+<p>Best way to verify what names correspond to what buttons on your
+controller, is to try the <span class="file">inputdemo.lua</span> from the modules folder.
+It uses overlay to display the last 20 input events - both from
+keyboard and from gamepad.</p>
+
+<p>If your module is registered for <span class="evt">"key_down"</span> event, but not for the
+<span class="evt">"gamepad_input"</span> event, then sider will automatically map gamepad events
+into keyboard events, and emit those, for such gamepad events that are
+defined in the "global input mapping" configuration - in <span class="file">gamepad.ini</span>.</p>
+
+<p>If you do not want this automatic mapping, make sure to register for
+the <span class="evt">"gamepad_input"</span> event in your module, and then do whatever is needed
+with the inputs. (You may choose to completely ignore them too, if you
+want. See example of that in <span class="file">camera.lua</span>)</p>
+
+<p class="note">
+IMPORTANT NOTE: Some events can fire multiple times for the same "action".
+That is normal, it's just how the game works internally. Make sure your
+module logic can handle such situations correctly.
+</p>
+
+
+<a class="top" href="#">Top</a>
+<a name="logging">
+<h3>5. Logging</h3>
+</a>
+
+<p>Sider provides a function called <span class="func">log</span>. This can be used to print
+out any information you want into the <span class="file">sider.log</span> file.
+You can use <span class="func">string.format</span> to format your message in a way similar
+to what you would do with C printf:
+
+<pre>
+log(string.format("My value is: %0.5f", math.pi))
+</pre>
+
+In <span class="file">sider.log</span> it will appear with a module name prefix, like as:
+
+<pre>
+[<i>modulename</i>.lua] My value is: 3.14159
+</pre>
+
+
+<a class="top" href="#">Top</a>
+<a name="env">
+<h3>6. Module environment</h3>
+</a>
+
+<p>Each module runs in its own environment. For detailed explanation
+on what an environment is - read about Lua environments in the Lua
+manual online, or in Programming in Lua book. What is important
+here is that a module has access to a limited set of globals:</p>
+
+<p>
+standard Lua provides:<br />
+<span class="func">assert, ipairs, pairs, tostring, tonumber, table,
+string, math, unpack, type, error, io, os, _VERSION, _G</span>
+</p>
+<p>
+sider adds:<br />
+<span class="func">log, memory, zlib, audio, match, _FILE</span>
+</p>
+
+<p>You can also enable <span class="func">ffi</span> and <span class="func">bit</span> modules, which are LuaJIT
+extensions. By default, they are disabled. To enable, modify your
+<span class="file">sider.ini</span> like this:</p>
+
+<pre>
+luajit.ext.enabled = 1
+</pre>
+
+<p>By the way, your module can "investigate" and find out what exactly
+is available for it to use - this is not hard, and is left as an
+exercise for the reader ;-) Or... you can cheat, and look at <span class="file">env.lua</span>
+module.</p>
+
+
+<a class="top" href="#">Top</a>
+<a name="memory">
+<h3>7. Memory library</h3>
+</a>
+
+<p>The "memory" library provides a set of low-level functions that
+may prove useful if you're doing some advanced modding.</p>
+
+<p>For example, you need some game state info that is not available in
+sider's context object and isn't communicated through events either.
+Or you want to modify some bytes in memory, because you feel really
+adventurous.</p>
+
+
+<p class="warn">
+<b>IMPORTANT WARNING:</b><br />
+USE THIS LIBRARY WITH CARE AND CAUTION,
+AND IF AND ONLY IF YOU KNOW WHAT YOU'RE DOING. REALLY.
+THESE ARE POWERFUL TOOLS, BUT THERE ARE ALSO DANGEROUS, BECAUSE
+WRITING INTO A WRONG PLACE IN MEMORY CAN HAVE DISASTROUS CONSEQUENCES.
+ALWAYS TRY TO HAVE A BACKUP COPY OF YOUR EDIT DATA AND SAVEGAME FILES.
+</p>
+
+<p class="func">
+memory.read(addr, n)
+</p>
+
+<p class="desc">This function reads (n) bytes at memory address (addr).
+Return value: string of n bytes at given memory address</p>
+
+<p class="func">
+memory.write(addr, str)
+</p>
+
+<p class="desc">This function writes the string of bytes (str) at the address (addr).
+Return value: <span class="file">nil</span></p>
+
+<p class="func">
+memory.guard(addr, len, fmt, default_value)
+</p>
+
+<p class="desc">This function first checks if the address "addr" contains the value
+that matches the default_value given. (It automatically unpacks
+the byte sequence of length "len", using the format "fmt".)
+If the value checked does not match the "default_value", an error
+is raised.</p>
+
+<p>Otherwise, the function returns a new object (table), which has
+the "read" and "write" methods that can be used to read and
+modify the value at given address.</p>
+
+<p class="func">
+memory.search(str, start_addr, end_addr)
+</p>
+
+<p class="desc">This function searches for the string of bytes (str), in the range
+of memory addresses between start_addr and end_addr.
+Return value: address, at which the string of bytes was found
+or <span class="file">nil</span>, if the string was not found.</p>
+
+<p class="func">
+memory.safe_search(str, start_addr, end_addr)
+</p>
+
+<p class="desc">This function also searches for the string of bytes (str), in the range
+of memory addresses between start_addr and end_addr. However, unlike <b>memory.search</b>,
+which expects the entire range to be valid, this function checks if the memory pages it
+is about to access are allocated and available to the game process. Because of that, it is
+slower than memory.search, but it is very safe, as it skips past unavailable areas of RAM and
+guard pages and continues on.</p>
+Return value: address, at which the string of bytes was found
+or <span class="file">nil</span>, if the string was not found.</p>
+
+<p class="func">
+memory.pack(format, number)
+</p>
+
+<p class="desc">This function converts a Lua number into one of the supported binary
+formats (little endian). The "format" parameter is a string that should
+have one of the following values:
+<ul>
+<li>"f"   : 32-bit float,</li>
+<li>"d"   : 64-bit double-precision float,</li>
+<li>"i64" : 64-bit signed integer,</li>
+<li>"u64" : 64-bit unsigned integer,</li>
+<li>"i32" : 32-bit signed integer,</li>
+<li>"u32" : 32-bit unsigned integer,</li>
+<li>"i16" : 16-bit signed integer,</li>
+<li>"u16" : 16-bit unsigned integer</li>
+<li>"i8"  : 8-bit signed integer [-127,127]</li>
+<li>"u8"  : 8-bit unsigned integer [0,255]</li>
+<li>"b"   : string of bytes</li>
+<li>"t"   : text string</li>
+</ul>
+Return value: string of bytes, representing the number in the format
+specified by the "format" parameter</p>
+
+<p class="func">
+memory.unpack(format, str)
+</p>
+
+<p class="desc">This function converts a string of bytes (str) into a Lua number, using
+the format parameter to interpret the binary spec. The same values are
+supported for "format" param as in memory.pack function.
+Return value: a Lua number, converted from binary representation</p>
+
+<p>These last two functions (memory.pack/memory.unpack) are useful, when
+used together with memory.read and memory.write, when you need to read
+and modify values in RAM and you know what binary formats are used for
+those values. See <span class="file">modules/memtest.lua</span> - as the example module that
+demonstrates the usage.</p>
+
+<p class="func">
+memory.hex(value)
+</p>
+
+<p class="desc">Utility function to output value in hexadecimal format.
+Depending on the type of value, the output differs slightly:</p>
+
+<pre>
+    local s = 'Football'
+    log(memory.hex(s))  --&gt; prints "466f6f7462616c6c" in the log
+</pre>
+
+<pre>
+    local n = 12345
+    log(memory.hex(n))  --&gt; prints "0x3039" in the log
+</pre>
+
+<p class="func">
+memory.get_process_info()
+</p>
+
+<p class="desc">
+This function queries the game process (PES2020.exe) for information
+about where it is loaded in memory.<br />
+Return value: a table containing at least two keys:
+<ul>
+<li>"<b>base</b>" - base address of the main process in memory</li>
+<li>"<b>sections</b>" - a table of tables, with each member table containing
+at least these keys:
+<ul>
+<li>"<b>name</b>"   - name of the section
+<li>"<b>start</b>"  - starting address in memory
+<li>"<b>finish</b>" - first address beyond this section
+</ul>
+</ul>
+</p>
+
+<p class="func">
+memory.search_process(s)
+</p>
+
+<p class="desc">This function searches for a string s in memory, but unlike memory.search
+function, it does not take start and finish addresses. Instead, it searches
+the game process sections, one at a time, until it finds the string, or
+until all sections are examined.<br />
+Returns 2 values:
+<ol>
+<li>address of string s in memory, if found, or <span class="file">nil</span> - otherwise</li>
+<li>table with section info, in which the string was found.</li>
+</ol>
+</p>
+
+
+<a class="top" href="#">Top</a>
+<a name="zlib">
+<h3>8. Zlib library</h3>
+</a>
+
+<p>This library contains a small set of utility functons to work with
+compressed data. An example usage could be a combination of using a
+<span class="evt">"livecpk_data_ready"</span> event to get the data, as it is read by the game, and
+then unpacking it, if it is compressed ("zlibbed").</p>
+
+<p class="func">
+zlib.compress(data)
+</p>
+
+<p class="desc">Takes the string of data and compresses it.<br />
+Returns 2 values:
+<ol>
+<li>string with compressed data, or <span class="file">nil</span> - if an error occured</li>
+<li><span class="file">nil</span>, or string with error message, if something went wrong</li>
+</ol>
+</p>
+
+<p class="func">
+zlib.uncompress(compressed_data, uncompressed_size)
+</p>
+
+<p class="desc">Decompresses the give string of data. The second parameter is
+optional: if you know the size of uncompressed data, then it is more
+efficient to provide it. If not, then uncompress will try a big
+enough buffer (3-times the size of compressed data)<br />
+Returns 2 values:
+<ol>
+<li>string with uncompressed data, or <span class="file">nil</span> - if an error occured</li>
+<li><span class="file">nil</span>, or string with error message, if something went wrong</li>
+</ol>
+</p>
+
+<p class="func">
+zlib.pack(data)
+</p>
+
+<p class="desc">Creates a data structure that consists of "WESYS" header, used by
+Konami in PES games, followed by raw compressed data. The size of
+the WESYS header is 16 bytes, and its format is as follows:
+<ul>
+<li>bytes 0-2: magic bytes (version): <tt>00 01 01</tt></li>
+<li>bytes 3-7: "WESYS"</li>
+<li>bytes 8-11: compressed size</li>
+<li>bytes 12-15: uncompressed size</li>
+</ul>
+Returns 2 values:
+<ol>
+<li>string containing the data structure, or <span class="file">nil</span> - if an error occured</li>
+<li><span class="file">nil</span>, or string with error message, if something went wrong</li>
+</ol>
+</p>
+
+<p class="func">
+zlib.unpack(data)
+</p>
+
+<p class="desc">Checks if the input is in Konami format of WESYS header, followed
+by the compressed data. If so, it will try to uncompress the data,
+using the size information from the header. If the data is not in
+the expected format, then it is returned as is - unmodified.<br />
+Returns 2 values:
+<ol>
+<li>string containing uncompressed bytes, or original data,
+if the input is not in WESYS-format, or <span class="file">nil</span>, if some error occured</li>
+<li><span class="file">nil</span>, or string with error message, if an error occured.</li>
+</ol>
+</p>
+
+<a class="top" href="#">Top</a>
+<a name="audio">
+<h3>9. Audio library</h3>
+</a>
+
+<p>This library provides support for playing music and sound effects, which exist completely
+outside of the game files. Sounds are not loaded to replace existing ones, but instead you
+can load audio of any length and play it at any time, at any volume, using all the information
+and events that Sider scripting engine provides.
+Audio formats supported are: <span class="auf">WAVE</span>, <span class="auf">MP3</span> and <span class="auf">FLAC</span>.
+Simple effects, such as <b>fade-in</b> and <b>fade-out</b>
+are supported, as well as a way to <b>change volume</b> and <b>pause/resume</b> a playing sound.
+See examples further down on how to accomplish these things, and also consult
+<span class="file">audiodemo.lua</span> example module.</p>
+
+<p class="func"><i>obj</i> = audio.new(filename)</p>
+
+<p class="desc">This function creates a new sound object and returns it as a value of Lua type "userdata".
+The filename parameter must contain the full pathname to the sound file. All subsequent operations are done
+on this sound object. Let's see some of them.</p>
+
+<p class="func"><i>obj</i>:play()</p>
+
+<p class="desc">Start playing the sound. Notice that we use of the ":" symbol, which is a usual way
+that methods on objects are called in Lua. The "play" method will return immediately, regardless of how long the
+duration of the sound is. It will continue playing in the background, until it finishes, or is stopped,
+paused, faded-out at a later time.</p>
+
+<p>Here is the simplest example of how to play a sound effect:
+<pre>
+local s = audio.new("c:\\my-sounds\\ping.wav")
+s:play()
+</pre>
+
+<p class="gwarn">IMPORTANT NOTE: Due to implementation details of the audio library, you cannot create sound objects in the
+module's "init" function. If you try that, the "init" function will just hang and never return, blocking
+the game from even starting. Creating sound objects in all other event handler functions is totally fine.</p>
+
+<p class="note"><b>Sound object lifetime</b><br /><br />
+If you play a short sound effect and do not need to do anything with it afterwards, then using a local
+variable - like in the code above - is fine. However, if you want to affect the play later on, for example: change
+its volume, or pause it, fade out/fade back in, then you need to store the sound object in a non-local variable. You can do
+that using a module-level variable, or store sound object a non-local table. We will see an example of doing that
+in the next code snippet below.</p>
+
+<p class="func"><i>obj</i>:set_volume(volume)</p>
+
+<p class="desc">Sets the volume for the sound. The "volume" parameter is a float in the ranging from 0.0 (no sound)
+to 1.0 (full volume). If you call this on an object that is already playing, the volume will change immediately.</p>
+
+<p><b>Example module: audio1.lua</b>
+<pre>
+local m = {}
+
+-- place where we keep our sound files
+local content_root = ".\\content\\audio-demo\\"
+
+-- module-level variable to keep reference to our sound object
+local s
+
+function m.set_stadium_choice(ctx, stadium_choice)
+    s = audio.new(content_root .. "sample.wav")
+    s:set_volume(0.8)
+    s:play()
+end
+
+function m.init(ctx)
+    -- make content_root and absolute path,
+    -- now that sider_dir is available in the context
+    content_root = ctx.sider_dir .. content_root
+
+    -- register event handlers
+    ctx.register("set_stadium_choice", m.set_stadium_choice)
+end
+
+return m
+</pre>
+</p>
+
+<p class="func"><i>obj</i>:get_volume()</p>
+
+<p class="desc">Returns the current volume of the sound object, as a float in the range of [0.0, 1.0]</p>
+
+<p class="func"><i>obj</i>:get_filename()</p>
+
+<p class="desc">Returns the full filename of the sound file that was given when the sound object was created</p>
+
+<p class="func"><i>obj</i>:pause()</p>
+
+<p class="desc">Pauses a playing sound. You can resume it again by calling <span class="func"><i>obj</i>:play()</span> again.
+If the fade-out effect has been set (with a call to <span class="func">fade_to</span> method before <span class="func">pause</span>),
+then the sound will be paused after the volume fading finishes.
+</p>
+
+<p class="func"><i>obj</i>:finish()</p>
+
+<p class="desc">Stops a playing sound. There is no way to resume it. If you want to play the same sound again, then you
+need to create a new sound object with <span class="func">audio.new(filename)</span>.
+If the fade-out effect has been set (with a call to <span class="func">fade_to</span> method before <span class="func">finish</span>),
+then the sound will be stopped after the volume fading finishes.</p>
+
+<p class="func"><i>obj</i>:fade_to(volume, in_seconds)</p>
+
+<p class="desc">Fade the volume from the current level to the level specified by "volume" parameter, over the time period specified
+by "in_seconds" parameter. Note that fading starts immediately only if the sound is already playing. If the sound hasn't been started
+yet or is currently paused, then the fading will begin after <span class="func">play</span> method is called.
+<ul>
+<li>volume: target volume in the range of [0.0, 1.0]</li>
+<li>in_seconds: how long to do the volume fading for. You can specify fractions of a second here too - for example, 2.5 is perfectly fine.</li>
+</ul>
+</p>
+
+<p class="func"><i>obj</i>:when_done(func)</p>
+
+<p class="desc">This method allows to run some code - a function specified by "func" parameter -
+immediately after the sound finishes playing, either because of playing out in its entirety or due to being stopped by
+a call to <span class="func">finish</span> method. This allows for things like playing a sequence of multiple sounds,
+following one another, or just in general running any logic that needs to be done after a sound finishes playing.</p>
+
+<p>Now let's see some examples of fade-in/fade-out effects. We will create a module that plays one sound, when user
+presses "[5]" button, then cross-fades another sound, when user presses "[6]" button.</p>
+
+<p><b>Example: audio2.lua</b>
+
+<pre>
+local m = {}
+
+local sound
+local sound2
+
+function m.key_up(ctx, vkey)
+    if vkey == 0x35 then
+        sound = audio.new(ctx.sider_dir .. "content\\audio-demo\\uefa.mp3")
+        sound:play()
+
+    elseif vkey == 0x36 then
+        -- do a cross-fade from one sound to another
+        sound:fade_to(0, 3.5) -- fade-out in 3.5 seconds
+        sound:finish()
+
+        sound2 = audio.new(ctx.sider_dir .. "content\\audio-demo\\sample.wav")
+        sound2:set_volume(0)   -- start from 0 volume
+        sound2:fade_to(1, 2.5) -- fade in in 2.5 seconds
+        sound2:play()
+    end
+end
+
+function m.overlay_on(ctx)
+    return "press [5] - to play music, [6] - to crossfade to another sound"
+end
+
+function m.init(ctx)
+    ctx.register("key_up", m.key_up)
+    ctx.register("overlay_on", m.overlay_on)
+end
+
+return m
+</pre>
+</p>
+
+<p>Another, a little longer example: let's start some music, when user presses ["5"] button. During a match, if we press Start button
+to pause the game, let's have the music fade out. Then when the user resumes the game, fade the music back in.</p>
+
+<p><b>Example: audio3.lua</b>
+<pre>
+local m = {}
+
+local sound
+local volume
+
+local function pause_sound()
+    if sound then
+        -- remember volume of this sound, so that we can resume playback later at the same volume
+        volume = sound:get_volume()
+        -- pause with 2.5 second fade-out
+        sound:fade_to(0, 2.5)
+        sound:pause()
+    end
+end
+
+local function resume_sound()
+    if sound then
+        -- resume play with 2.5 second fade-in
+        sound:fade_to(volume, 2.5)
+        sound:play()
+    end
+end
+
+function m.data_ready(ctx, filename)
+    if filename == "common\\script\\flow\\Match\\MatchPrePause.json" then
+        log("game loaded: " .. filename)
+        -- pause sound when Pause Menu shows up
+        pause_sound()
+
+    elseif filename == "common\\script\\flow\\Match\\MatchPostPause.json" then
+        log("game loaded: " .. filename)
+        -- resume sound, when Pause Menu exits
+        resume_sound()
+
+    end
+end
+
+function m.key_up(ctx, vkey)
+    if vkey == 0x35 then
+        if sound then
+            -- already playing. Let's stop it
+            sound:finish()
+        else
+            -- not playing: Let's start a new sound
+            sound = audio.new(ctx.sider_dir .. "content\\audio-demo\\uefa.mp3")
+            sound:set_volume(0.7)
+            sound:when_done(function(ctx)
+                -- we are finished playing: set sound non-local var back to nil
+                sound = nil
+            end)
+            sound:play()
+        end
+    end
+end
+
+function m.overlay_on(ctx)
+    return "press [5] to play music"
+end
+
+function m.init(ctx)
+    ctx.register("livecpk_data_ready", m.data_ready)
+    ctx.register("key_up", m.key_up)
+    ctx.register("overlay_on", m.overlay_on)
+end
+
+return m
+</pre>
+</p>
+
+<p>Let's see an example of 3-sound sequence:</p>
+
+<p><b>Example: audio4.lua</b>:
+
+<pre>
+local m = {}
+
+-- we will keep references to sound objects in this table
+local sounds = {}
+
+function m.key_up(ctx, vkey)
+    if vkey == 0x35 then
+        local s1 = audio.new(ctx.sider_dir .. "content\\audio-demo\\sample.wav")
+        s1:when_done(function(ctx)
+            sounds[s1] = nil
+            local s2 = audio.new(ctx.sider_dir .. "content\\audio-demo\\uefa.mp3")
+            s2:when_done(function(ctx)
+                sounds[s2] = nil
+                local s3 = audio.new(ctx.sider_dir .. "content\\audio-demo\\toggle.wav")
+                s3:when_done(function(ctx)
+                    sounds[s3] = nil
+                    log("sequence done playing")
+                end)
+                sounds[s3] = true
+                s3:play()
+            end)
+            sounds[s2] = true
+            s2:play()
+        end)
+        sounds[s1] = true
+        s1:play()
+        log("sequence started playing")
+    end
+end
+
+function m.overlay_on(ctx)
+    return "press [5] to play a sequence of sounds"
+end
+
+function m.init(ctx)
+    ctx.register("key_up", m.key_up)
+    ctx.register("overlay_on", m.overlay_on)
+end
+
+return m
+</pre>
+</p>
+
+<p><img src="cr7.jpg" style="float: left; padding: 0 1em 1em 0;" height="150" />
+One last example is a sort of a fun one. It plays Cristiano Ronaldo's "suuu!" shout, when he scores a goal.
+The sound effect is triggered, when the game loads a specific animation file. The MP3 file has 5 seconds of silence,
+followed by the shout. It is not perfect in terms of syncing animation and sound, but it works pretty well
+most of the times. Just another demonstration of what the audio library can do for you, when used together
+with the rest of the Sider's Lua scripting engine.</p>
+
+<p style="clear:both"><b>Example: cr7_audio.lua</b>:
+
+<pre>
+local m = {}
+
+local cr_sound
+
+function m.data_ready(ctx, filename)
+    if filename == "common\\demo\\fixdemo\\goal\\cut_data\\goal_hugSet_starJump2018_base.fdc" then
+        log("game loaded: " .. filename)
+        -- Play C.Ronaldo "suuu!" sound, when he scores
+        -- cr_suuu_d5.mp3 has 5 seconds of silence, followed by "suuu!"
+        cr_sound = audio.new(ctx.sider_dir .. "content\\audio-demo\\cr_suuu_d5.mp3")
+        cr_sound:set_volume(0.4)
+        cr_sound:play()
+    end
+end
+
+function m.init(ctx)
+    ctx.register("livecpk_data_ready", m.data_ready)
+end
+
+return m
+</pre>
+</p>
+
+<a class="top" href="#">Top</a>
+<a name="match">
+<h3>10. Match library</h3>
+</a>
+
+<p>This is a library that allows you query for some statistics about the
+current ongoing match. As of 6.3.0 release, it is still in experimental stage,
+so use with caution. It is actually disabled by default, and in order to enable
+this library, you need to have this line in your <span class="file">sider.ini</span>:
+
+<pre>
+match-stats.enabled = 1
+</pre>
+</p>
+
+<p class="func">match.stats()</p>
+
+<p class="desc">This function returns a table, containing information about live match.
+If there are no stats available right now (because, for example, there is no
+match going on), then the return value will be <span class="file">nil</span>
+</p>
+
+<p>If a table is returned, it can contain the following keys:
+<ol>
+<li><b>home_score</b>, <b>away_score</b>: current score</li>
+<li><b>pk_home_score</b>, <b>pk_away_score</b>: current score in penalty shootout (if one is happening)</li>
+<li><b>period</b>: period of the game: 0 - unknown, 1 - first half, 2 - second half, 3 - 1st exra time, 4 - 2nd extra time,
+5 - penalties</li>
+<li><b>clock_minutes</b>, <b>clock_seconds</b>: current match clock</li>
+<li><b>added_minutes</b>: <span class="file">nil</span> or number of minutes added at the end of a half (announced injury time)</li>
+</ol>
+</p>
+
+<p>See <span class="file">modules/mstats.lua</span> - for an example of using this function.</p>
+
+<p>
+That's all for now. Enjoy programming and game modding with Sider! :-)<br />
+<a href="#">Back to top</a>
+</p>
+
+</body>
+</html>
