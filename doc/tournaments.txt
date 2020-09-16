@@ -59,17 +59,17 @@ South American Championship - 10
 English League - 17
 Serie A TIM - 18
 Spanish League - 19
-Ligue 1 Conforama - 20
+Ligue 1 Uber Eats - 20
 Eredivisie - 21
 Liga NOS - 22
 England Cup - 23
 Coppa Italia - 24
 Spanish Cup - 25
-Coupe de la Ligue BKT - 26
+French Cup - 26
 Netherlands Cup - 27
 Portugal Cup - 28
-Campeonato Brasileiro Série A - 29
-Superliga Argentina - 30
+BRASILEIRÃO ASSAÍ 2020 - 29
+Liga Profesional de Fútbol - 30
 Brazilian Cup - 31
 International Cup - 34
 International Cup - 1058
@@ -100,14 +100,14 @@ Asia and Oceania Regional Qualifiers - 2087
 African Regional Qualifiers - 40
 African Regional Qualifiers - 1064
 African Regional Qualifiers - 2088
-European Cup - 41
-European Cup - 1065
-European Cup - 2089
-European Cup - 3113
-European Cup - 4137
-European Cup - 5161
-European Cup - 6185
-European Cup - 42
+UEFA EURO 2020™ - 41
+UEFA EURO 2020™ - 1065
+UEFA EURO 2020™ - 2089
+UEFA EURO 2020™ - 3113
+UEFA EURO 2020™ - 4137
+UEFA EURO 2020™ - 5161
+UEFA EURO 2020™ - 6185
+UEFA EURO 2020™ - 42
 American Cup - 43
 Asia-Oceanian Cup - 44
 Asia-Oceanian Cup - 1068
@@ -136,12 +136,12 @@ International Friendly Match - 56
 Training Match - 57
 Testimonial - 58
 Argentinean Cup - 59
-Campeonato AFP Planvital - 67
+Campeonato PlanVital - 67
 Chilean Cup - 68
 English 2nd Division - 79
 Spanish 2nd Division - 80
-Domino's Ligue 2 - 81
-Italian 2nd Division - 82
+Ligue 2 BKT - 81
+Serie BKT - 82
 English Promotion Play-off - 83
 Spanish 2nd Division Playoffs - 84
 Italian Promotion Play-off - 85
@@ -165,10 +165,10 @@ International Champions Cup SA - 106
 International Champions Cup Asia - 107
 World Selection Challenge - 108
 Jupiler Pro League - 115
-Russian Premier Liga - 116
+Tinkoff Russian Premier Liga - 116
 Raiffeisen Super League - 117
-Spor Toto Süper Lig - 118
-Liga Aguila - 119
+Süper Lig - 118
+Liga BetPlay DIMAYOR - 119
 CFA Super League - 120
 Belgian Cup - 122
 Russian Cup - 123
@@ -181,7 +181,7 @@ Russian Super Cup - 129
 Turkish Super Cup - 130
 Colombian Super Cup - 131
 Chinese Super Cup - 132
-Ladbrokes Premiership - 133
+Scottish Premiership - 133
 First Phase - 134
 Top Six - 135
 Bottom Six - 136
@@ -189,30 +189,27 @@ Scottish Cup - 137
 3F Superliga - 141
 Danish Cup - 142
 Regular Season - 147
-Championship Round - 148
+Play-Offs Group A - 148
 Bottom Round Group A - 149
 Bottom Round Group B - 150
-Play-Offs - 151
+European Play-Offs - 151
 Regular Season - 155
-Championship Play-offs - 156
+Play-Offs Group A - 156
 Play-Offs Group A - 157
 Play-Offs Group B - 158
-Play-Off Finals - 159
-Liga Aguila I Playoffs - 160
-Liga Aguila II Playoffs - 161
+European Play-Offs - 159
+Liga BetPlay DIMAYOR I Playoffs - 160
+Liga BetPlay DIMAYOR II Playoffs - 161
 TOYOTA Thai League - 162
-Campeonato Brasileiro Série B - 163
+BRASILEIRÃO SÉRIE B 2020 - 163
 Thai Cup - 164
 Thai Super Cup - 165
 First Phase - 166
 Second Phase - 167
-Liga Aguila I - 168
-Liga Aguila II - 169
-
-
-CompetitionRegulation4.bin
-
-
+Liga BetPlay DIMAYOR I - 168
+Liga BetPlay DIMAYOR II - 169
+Play-Offs Group B - 172
+Play-Offs Group B - 175
 AFC Champions League - 15
 AFC Champions League - 1039
 AFC Champions League - 2063
