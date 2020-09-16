@@ -1,6 +1,6 @@
 # Introduction
 
-Sider 6 is a companion program for Pro Evolution Soccer 2020.
+Sider 7 is a companion program for Pro Evolution Soccer 2021.
 
 # How to build
 
