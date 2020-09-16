@@ -142,14 +142,23 @@ static int lcpk_offs_at_lookup_file = 0;
 0000000150E98CC6 | 4C 01 C1                           | add rcx,r8                           |
 0000000150E98CC9 | E9 12 0A DD EF                     | jmp pes2020.140C696E0                |
 0000000150E98CCE | C3                                 | ret                                  |
+
+00000001414C09D0 | 49:6300                  | movsxd rax,dword ptr ds:[r8]            | at set team id
+00000001414C09D3 | 83F8 02                  | cmp eax,2                               |
+00000001414C09D6 | 7D 16                    | jge pes2021.1414C09EE                   |
+00000001414C09D8 | 4C:69C0 90060000         | imul r8,rax,690                         |
+00000001414C09DF | 48:81C1 38010000         | add rcx,138                             |
+00000001414C09E6 | 49:03C8                  | add rcx,r8                              |
+00000001414C09E9 | E9 E24E65FF              | jmp pes2021.140B158D0                   |
+00000001414C09EE | C3                       | ret                                     |
 */
-static BYTE pattern_set_team_id[18] =
+static BYTE pattern_set_team_id[15] =
     //"\x49\x63\x00"
     //"\x83\xf8\x02"
     //"\x7d\x26"
-    "\x4c\x69\xc0\x54\x06\x00\x00"
-    "\x48\x81\xc1\x38\x01\x00\x00"
-    "\x4c\x01\xc1";
+    "\x4c\x69\xc0\x90\x06\x00\x00"
+    "\x48\x81\xc1\x38\x01\x00\x00";
+    //"\x4c\x01\xc1";
 static int offs_set_team_id = -8;
 
 static BYTE pattern_set_team_id_head[2] =
@@ -213,10 +222,15 @@ static BYTE pattern_set_settings_tail[2] =
 0000000141EE81E5 | 8B 8E 98 04 00 00                  | mov ecx,dword ptr ds:[rsi+498]         | c2
 0000000141EE81EB | 41 80 E6 01                        | and r14b,1                             |
 0000000141EE81EF | D1 FD                              | sar ebp,1                              |
+
+0000000141F5184E | 4C:8DAB 00C40000         | lea r13,qword ptr ds:[rbx+C400]         |
+0000000141F51855 | 8B8B 98040000            | mov ecx,dword ptr ds:[rbx+498]          |
+0000000141F5185B | 41:80E6 01               | and r14b,1                              |
+0000000141F5185F | D1FD                     | sar ebp,1                               |
 */
 static BYTE pattern_trophy_check[20] =
-    "\x4c\x8d\xae\x00\xc4\x00\x00"
-    "\x8b\x8e\x98\x04\x00\x00"
+    "\x4c\x8d\xab\x00\xc4\x00\x00"
+    "\x8b\x8b\x98\x04\x00\x00"
     "\x41\x80\xe6\x01"
     "\xd1\xfd";
 static int offs_trophy_check = 7;
@@ -279,7 +293,10 @@ static BYTE patch_set_minutes[6] =
     "\xc3";
 
 // controller restrictions ("sider")
-
+/*
+0000000140C67D37 | F2:0F1000                | movsd xmm0,qword ptr ds:[rax]           |
+0000000140C67D3B | F2:0F1183 A8000000       | movsd qword ptr ds:[rbx+A8],xmm0        |
+*/
 static BYTE pattern_sider[13] =
     "\xf2\x0f\x10\x00"
     "\xf2\x0f\x11\x83\xa8\x00\x00\x00";
@@ -295,11 +312,21 @@ static int offs_sider = 0;
 0000000155BBBAF1 | 49 8B 5B 30                        | mov rbx,qword ptr ds:[r11+30]          |
 0000000155BBBAF5 | 49 8B 73 38                        | mov rsi,qword ptr ds:[r11+38]          |
 0000000155BBBAF9 | 49 8B 7B 40                        | mov rdi,qword ptr ds:[r11+40]          |
+
+0000000141E5528B | 48:63C1                  | movsxd rax,ecx                          |
+0000000141E5528E | 8B44C4 04                | mov eax,dword ptr ss:[rsp+rax*8+4]      |
+0000000141E55292 | 48:8B8D 50090000         | mov rcx,qword ptr ss:[rbp+950]          |
+0000000141E55299 | 48:33CC                  | xor rcx,rsp                             |
+0000000141E5529C | E8 3FA174FF              | call pes2021.14159F3E0                  |
+0000000141E552A1 | 4C:8D9C24 600A0000       | lea r11,qword ptr ss:[rsp+A60]          |
+0000000141E552A9 | 49:8B5B 30               | mov rbx,qword ptr ds:[r11+30]           |
+0000000141E552AD | 49:8B73 38               | mov rsi,qword ptr ds:[r11+38]           |
+0000000141E552B1 | 49:8B7B 40               | mov rdi,qword ptr ds:[r11+40]           |
 */
 static BYTE pattern_trophy_table[15] =
     "\x48\x63\xc1"
     "\x8b\x44\xc4\x04"
-    "\x48\x8b\x8d\x40\x09\x00\x00";
+    "\x48\x8b\x8d\x50\x09\x00\x00";
 static int offs_trophy_table = 30;
 
 // ball name
@@ -413,13 +440,26 @@ static int offs2_set_stadium_choice = 12;
 000000014CFE6526 | 42 80 3C 02 00          | cmp byte ptr ds:[rdx+r8],0             | rdx+r8*1:"Allianz Parque"
 000000014CFE652B | 75 F6                   | jne pes2019.14CFE6523                  |
 000000014CFE652D | 48 89 C1                | mov rcx,rax                            |
+
+00000001414E09A3 | 8079 08 00               | cmp byte ptr ds:[rcx+8],0               |
+00000001414E09A7 | 48:8D51 08               | lea rdx,qword ptr ds:[rcx+8]            |
+00000001414E09AB | 75 12                    | jne pes2021.1414E09BF                   |
+00000001414E09AD | 45:33C0                  | xor r8d,r8d                             |
+00000001414E09B0 | 48:8BC8                  | mov rcx,rax                             |
+00000001414E09B3 | E8 B819F2FE              | call pes2021.140402370                  |
+00000001414E09B8 | B0 01                    | mov al,1                                |
+00000001414E09BA | 48:83C4 28               | add rsp,28                              |
+00000001414E09BE | C3                       | ret                                     |
+00000001414E09BF | 49:83C8 FF               | or r8,FFFFFFFFFFFFFFFF                  |
+00000001414E09C3 | 49:FFC0                  | inc r8                                  |
+00000001414E09C6 | 42:803C02 00             | cmp byte ptr ds:[rdx+r8],0              |
+00000001414E09CB | 75 F6                    | jne pes2021.1414E09C3                   |
+00000001414E09CD | 48:8BC8                  | mov rcx,rax                             |
 */
-static BYTE pattern_stadium_name[17] =
+static BYTE pattern_stadium_name[11] =
     "\x80\x79\x08\x00"
     "\x48\x8d\x51\x08"
-    "\x75\x12"
-    "\x45\x31\xc0"
-    "\x48\x89\xc1";
+    "\x75\x12";
 static int offs_stadium_name = 28;
 static BYTE pattern_stadium_name_head[3] = "\x50\x50";
 static BYTE pattern_stadium_name_tail[4] = "\x58\x58\x90";
@@ -488,15 +528,36 @@ static BYTE pattern_stadium_name_tail[4] = "\x58\x58\x90";
 00000001414E74CB | 90                                 | nop                                    |
 00000001414E74CC | E8 2F 98 F1 FE                     | call pes2020.140400D00                 |
 00000001414E74D1 | 48 8B 5C 24 30                     | mov rbx,qword ptr ss:[rsp+30]          |
+
+
+000000014150F545 | 44:0FB780 94020000       | movzx r8d,word ptr ds:[rax+294]         |
+000000014150F54D | 41:3BE8                  | cmp ebp,r8d                             |
+000000014150F550 | 75 3A                    | jne pes2021.14150F58C                   |
+000000014150F552 | 48:8BC8                  | mov rcx,rax                             |
+...
+000000014150F59D | 48:85C0                  | test rax,rax                            |
+000000014150F5A0 | 74 0D                    | je pes2021.14150F5AF                    |
+000000014150F5A2 | 48:8BD6                  | mov rdx,rsi                             |
+000000014150F5A5 | 48:8BC8                  | mov rcx,rax                             |
+000000014150F5A8 | E8 6320FDFF              | call pes2021.1414E1610                  |
+000000014150F5AD | EB 12                    | jmp pes2021.14150F5C1                   |
+000000014150F5AF | 45:33C0                  | xor r8d,r8d                             |
+000000014150F5B2 | 48:8D15 9DEF4601         | lea rdx,qword ptr ds:[14297E556]        |
+000000014150F5B9 | 48:8BCE                  | mov rcx,rsi                             |
+000000014150F5BC | E8 AF2DEFFE              | call pes2021.140402370                  |
+000000014150F5C1 | 48:8B5C24 30             | mov rbx,qword ptr ss:[rsp+30]           |
+
+becomes
+
 */
 
 static BYTE pattern_def_stadium_name[9] = //[17] =
-    "\x44\x0f\xb7\x80\x58\x02\x00\x00";
+    "\x44\x0f\xb7\x80\x94\x02\x00\x00";
     //"\x44\x0f\xb6\x80\xda\x03\x00\x00";
     //"\x44\x39\xc5"
     //"\x75\x3a"
     //"\x48\x89\xc1";
-static int offs_def_stadium_name = 0xb0 - 0x55; //0x53;
+static int offs_def_stadium_name = 0xa0 - 0x45; //0x53;
 static BYTE pattern_def_stadium_name_head[3] = "\x75\x0c";
 static BYTE pattern_def_stadium_name_tail[15] =
     "\x48\x8b\xd6"

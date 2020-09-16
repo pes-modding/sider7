@@ -4398,7 +4398,7 @@ void sider_set_team_id(DWORD *dest, TEAM_INFO_STRUCT *team_info, DWORD offset)
     }
 
     BYTE *p = (BYTE*)dest - 0x138;
-    p = (is_home) ? p : p - 0x654;
+    p = (is_home) ? p : p - 0x690;
     MATCH_INFO_STRUCT *mi = (MATCH_INFO_STRUCT*)p;
     //logu_("mi: %p\n", mi);
     //logu_("mi->dw0: 0x%x\n", mi->dw0);
@@ -4420,7 +4420,7 @@ void sider_set_team_id(DWORD *dest, TEAM_INFO_STRUCT *team_info, DWORD offset)
             set_context_field_int("stadium_choice", mi->stadium_choice);
             set_match_info(mi);
 
-            DWORD home = decode_team_id(*(DWORD*)((BYTE*)dest - 0x654));
+            DWORD home = decode_team_id(*(DWORD*)((BYTE*)dest - 0x690));
             DWORD away = decode_team_id(*team_id_encoded);
 
             set_context_field_int("home_team", home);
@@ -6671,7 +6671,7 @@ bool hook_if_all_found() {
             log_(L"sider_data_ready: %p\n", sider_data_ready_hk);
             log_(L"call_to_move at: %p\n", _config->_hp_at_call_to_move);
 
-            if (_config->_hook_set_team_id) {
+            if (_config->_hp_at_set_team_id) {
                 BYTE *check_addr = _config->_hp_at_set_team_id - offs_set_team_id + offs_check_set_team_id;
                 logu_("_hp_at_set_team_id: %p\n", _config->_hp_at_set_team_id);
                 logu_("check_addr: %p\n", check_addr);
@@ -6689,14 +6689,14 @@ bool hook_if_all_found() {
                         (BYTE*)pattern_set_team_id_tail_2, sizeof(pattern_set_team_id_tail_2)-1);
                 }
             }
-            if (_config->_hook_set_settings)
+            if (_config->_hp_at_set_settings)
                 hook_call_with_head_and_tail(_config->_hp_at_set_settings, (BYTE*)sider_set_settings_hk,
                     (BYTE*)pattern_set_settings_head, sizeof(pattern_set_settings_head)-1,
                     (BYTE*)pattern_set_settings_tail, sizeof(pattern_set_settings_tail)-1);
 
-            if (_config->_hook_trophy_check)
+            if (_config->_hp_at_trophy_check)
                 hook_call_rcx(_config->_hp_at_trophy_check, (BYTE*)sider_trophy_check_hk, 0);
-            if (_config->_hook_trophy_table)
+            if (_config->_hp_at_trophy_table)
                 hook_call_rcx(_config->_hp_at_trophy_table, (BYTE*)sider_trophy_table_hk, 0);
             if (_config->_hook_context_reset)
                 hook_call(_config->_hp_at_context_reset, (BYTE*)sider_context_reset_hk, 6);

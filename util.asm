@@ -96,14 +96,14 @@ sider_lookup_file_hk proc
 
 sider_lookup_file_hk endp
 
-;0000000150E98CB0 | 49 63 00                           | movsxd rax,dword ptr ds:[r8]         | at set team id
-;0000000150E98CB3 | 83 F8 02                           | cmp eax,2                            |
-;0000000150E98CB6 | 7D 16                              | jge pes2020.150E98CCE                |
-;0000000150E98CB8 | 4C 69 C0 54 06 00 00               | imul r8,rax,654                      |
-;0000000150E98CBF | 48 81 C1 38 01 00 00               | add rcx,138                          |
-;0000000150E98CC6 | 4C 01 C1                           | add rcx,r8                           |
-;0000000150E98CC9 | E9 12 0A DD EF                     | jmp pes2020.140C696E0                |
-;0000000150E98CCE | C3                                 | ret                                  |
+;00000001414C09D0 | 49:6300                  | movsxd rax,dword ptr ds:[r8]            | at set team id
+;00000001414C09D3 | 83F8 02                  | cmp eax,2                               |
+;00000001414C09D6 | 7D 16                    | jge pes2021.1414C09EE                   |
+;00000001414C09D8 | 4C:69C0 90060000         | imul r8,rax,690                         |
+;00000001414C09DF | 48:81C1 38010000         | add rcx,138                             |
+;00000001414C09E6 | 49:03C8                  | add rcx,r8                              |
+;00000001414C09E9 | E9 E24E65FF              | jmp pes2021.140B158D0                   |
+;00000001414C09EE | C3                       | ret                                     |
 
 sider_set_team_id_hk proc
 
@@ -116,7 +116,7 @@ sider_set_team_id_hk proc
         mov     [rsp+30h],rax
         cmp     eax,2
         jge     done
-        imul    r8,rax,654h
+        imul    r8,rax,690h
         add     rcx,138h
         add     rcx,r8
         mov     [rsp+20h],rcx
@@ -163,16 +163,16 @@ sider_set_settings_hk proc
 
 sider_set_settings_hk endp
 
-;0000000141EE81DE | 4C 8D AE 00 C4 00 00               | lea r13,qword ptr ds:[rsi+C400]        |
-;0000000141EE81E5 | 8B 8E 98 04 00 00                  | mov ecx,dword ptr ds:[rsi+498]         | c2
-;0000000141EE81EB | 41 80 E6 01                        | and r14b,1                             |
-;0000000141EE81EF | D1 FD                              | sar ebp,1                              |
+;0000000141F5184E | 4C:8DAB 00C40000         | lea r13,qword ptr ds:[rbx+C400]         |
+;0000000141F51855 | 8B8B 98040000            | mov ecx,dword ptr ds:[rbx+498]          | c2
+;0000000141F5185B | 41:80E6 01               | and r14b,1                              |
+;0000000141F5185F | D1FD                     | sar ebp,1                               |
 
 sider_trophy_check_hk proc
 
         push    rax
         sub     rsp,20h
-        mov     ecx,dword ptr [rsi+498h]
+        mov     ecx,dword ptr [rbx+498h]
         call    sider_trophy_check
         mov     ecx,eax
         and     r14b,1

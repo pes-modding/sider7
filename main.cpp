@@ -71,8 +71,8 @@ HWND BuildWindow(int nCmdShow)
     xstyle = WS_EX_LEFT;
 
     retval = CreateWindowEx(xstyle,
-        L"SDR6CL64",      // class name
-        L"Sider 6", // title for our window (appears in the titlebar)
+        L"SDR7CL64",      // class name
+        L"Sider 7", // title for our window (appears in the titlebar)
         style,
         CW_USEDEFAULT,  // initial x coordinate
         CW_USEDEFAULT,  // initial y coordinate
@@ -88,7 +88,7 @@ HWND BuildWindow(int nCmdShow)
     style = WS_CHILD | WS_VISIBLE;
     HWND heightLabel = CreateWindowEx(
             xstyle, L"Static", 
-            L"Sider for Pro Evolution Soccer 2020", style,
+            L"Sider for Pro Evolution Soccer 2021", style,
             20, 10, 210, 50,
             retval, NULL, NULL, NULL);
 
