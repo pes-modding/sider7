@@ -3,7 +3,7 @@
 -- by Hawke, zlac and juce
 
 local strings = {
-    "pes20-x64-gate.cs.konami.net",
+    "pes21-x64-gate.cs.konami.net",
 }
 local replacer = "0.0.0.0"
 local content_root = ".\\content\\netblock\\"

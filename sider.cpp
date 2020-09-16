@@ -152,7 +152,7 @@ struct TEAM_INFO_STRUCT {
     BYTE team_name[0x46];
     BYTE team_abbr[4];
     BYTE unknown1[2];
-    BYTE unknown2[0x54c];
+    BYTE unknown2[0x588];
     SHIRTCOLOR_STRUCT players[2];
     SHIRTCOLOR_STRUCT goalkeepers[1];
     SHIRTCOLOR_STRUCT extra_players[7];
