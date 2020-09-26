@@ -104,7 +104,7 @@ public:
 
     BYTE *_hp_at_set_min_time;
     BYTE *_hp_at_set_max_time;
-    BYTE *_hp_at_set_minutes;
+    BYTE *_hp_at_call_set_minutes;
     BYTE *_hp_at_sider;
 
     BYTE *_hp_at_dxgi;
@@ -172,7 +172,7 @@ public:
                  _hp_at_clear_sc(NULL),
                  _hp_at_set_min_time(NULL),
                  _hp_at_set_max_time(NULL),
-                 _hp_at_set_minutes(NULL),
+                 _hp_at_call_set_minutes(NULL),
                  _hp_at_sider(NULL),
                  _hp_at_trophy_table(NULL),
                  _hp_at_ball_name(NULL),

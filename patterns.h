@@ -292,6 +292,24 @@ static BYTE patch_set_minutes[6] =
     "\xc6\x41\x1c\x0a"
     "\xc3";
 
+/*
+0000000140AD63B1 | 43:0FB69486 E0A56702     | movzx edx,byte ptr ds:[r14+r8*4+267A5E0 |
+0000000140AD63BA | 48:8BCD                  | mov rcx,rbp                             |
+0000000140AD63BD | E8 3EB99E00              | call pes2021.1414C1D00                  | set minutes
+..
+00000001414C1D00 | 8851 1C                  | mov byte ptr ds:[rcx+1C],dl             |
+00000001414C1D03 | C3                       | ret                                     |
+00000001414C1D04 | CC                       | int3                                    |
+00000001414C1D05 | CC                       | int3                                    |
+00000001414C1D06 | CC                       | int3                                    |
+00000001414C1D07 | CC                       | int3                                    |
+*/
+static BYTE pattern_call_set_minutes[14] =
+    "\x43\x0f\xb6\x94\x86\xe0\xa5\x67\x02"
+    "\x48\x8b\xcd"
+    "\xe8";
+static int offs_call_set_minutes = 13;
+
 // controller restrictions ("sider")
 /*
 0000000140C67D37 | F2:0F1000                | movsd xmm0,qword ptr ds:[rax]           |
