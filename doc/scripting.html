@@ -1463,11 +1463,13 @@ return m
 </p>
 
 <p><img src="cr7.jpg" style="float: left; padding: 0 1em 1em 0;" height="150" />
-One last example is a sort of a fun one. It plays Cristiano Ronaldo's "suuu!" shout, when he scores a goal.
-The sound effect is triggered, when the game loads a specific animation file. The MP3 file has 5 seconds of silence,
-followed by the shout. It is not perfect in terms of syncing animation and sound, but it works pretty well
-most of the times. Just another demonstration of what the audio library can do for you, when used together
-with the rest of the Sider's Lua scripting engine.</p>
+One last example is a sort of a fun one. It plays Cristiano Ronaldo's "suuu!" shout, when he scores a goal <b>AND does
+his special "windmill" celebration with high jump and full turn around.</b> The sound effect is triggered, when the
+game loads a specific animation file. The MP3 file has 6 seconds of silence, followed by the shout. The delay achieves
+two things: 1) we time the sound with the pose that Ronaldo strikes; 2) if the game decides to load a different
+celebration, we cancel the playback of the sound.</p>
+<p>This may all feel a little too complex, but it just shows the flexibility of the audio library, and kind of
+logic you can put together - sensitive to specific sitations.</p>
 
 <p style="clear:both"><b>Example: cr7_audio.lua</b>:
 
@@ -1477,13 +1479,24 @@ local m = {}
 local cr_sound
 
 function m.data_ready(ctx, filename)
-    if filename == "common\\demo\\fixdemo\\goal\\cut_data\\goal_hugSet_starJump2018_base.fdc" then
-        log("game loaded: " .. filename)
-        -- Play C.Ronaldo "suuu!" sound, when he scores
-        -- cr_suuu_d5.mp3 has 5 seconds of silence, followed by "suuu!"
-        cr_sound = audio.new(ctx.sider_dir .. "content\\audio-demo\\cr_suuu_d5.mp3")
+    if string.match(filename, "goal\\cut_data\\goal_celebrate_0279_append02.fdc") then
+        log("Ronaldo celebration loaded: " .. filename)
+        -- Play C.Ronaldo "suuu!" sound, when he scores and does his unique celebration
+        -- cr_suuu_d6.mp3 has 6 seconds of silence, followed by "suuu!"
+        cr_sound = audio.new(ctx.sider_dir .. "content\\audio-demo\\cr_suuu_d6.mp3")
         cr_sound:set_volume(0.4)
         cr_sound:play()
+        cr_sound:when_done(function()
+            cr_sound = nil
+        end)
+    end
+    if cr_sound then
+        local another_celeb = string.match(filename, "goal\\cut_data\\goal_celebrate_(%d+)")
+        if another_celeb and tonumber(another_celeb) ~= 279 then
+            log("Another celebration loaded: " .. filename)
+            -- cancel SUUU sound
+            cr_sound:finish()
+        end
     end
 end
 

@@ -2,6 +2,12 @@ Sider 7 Release History
 =======================
 
 
+September 27, 2020
+v7.0.1
+- fix for "match.minutes" option in sider.ini. It works again now.
+- corrections for "cr7_audio.lua" module (Ronaldo SUUU sound demo)
+
+
 September 15, 2020
 v7.0.0
 - initial release. Most things seem to work
