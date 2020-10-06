@@ -293,22 +293,24 @@ static BYTE patch_set_minutes[6] =
     "\xc3";
 
 /*
-0000000140AD63B1 | 43:0FB69486 E0A56702     | movzx edx,byte ptr ds:[r14+r8*4+267A5E0 |
-0000000140AD63BA | 48:8BCD                  | mov rcx,rbp                             |
-0000000140AD63BD | E8 3EB99E00              | call pes2021.1414C1D00                  | set minutes
+0000000140AD64ED | E8 DEEB5500              | call pes2021.1410350D0                     | set minutes
+0000000140AD64F2 | E9 EB000000              | jmp pes2021.140AD65E2                      |
+0000000140AD64F7 | 41:83F8 01               | cmp r8d,1                                  |
+0000000140AD64FB | 48:8D5424 40             | lea rdx,qword ptr ss:[rsp+40]              |
+0000000140AD6500 | 48:8BCD                  | mov rcx,rbp                                |
 ..
-00000001414C1D00 | 8851 1C                  | mov byte ptr ds:[rcx+1C],dl             |
-00000001414C1D03 | C3                       | ret                                     |
-00000001414C1D04 | CC                       | int3                                    |
-00000001414C1D05 | CC                       | int3                                    |
-00000001414C1D06 | CC                       | int3                                    |
-00000001414C1D07 | CC                       | int3                                    |
+00000001410350D0 | 8851 1C                  | mov byte ptr ds:[rcx+1C],dl                |
+00000001410350D3 | C3                       | ret                                        |
+00000001410350D4 | CC                       | int3                                       |
+00000001410350D5 | CC                       | int3                                       |
+00000001410350D6 | CC                       | int3                                       |
+00000001410350D7 | CC                       | int3                                       |
 */
-static BYTE pattern_call_set_minutes[14] =
-    "\x43\x0f\xb6\x94\x86\xe0\xa5\x67\x02"
-    "\x48\x8b\xcd"
-    "\xe8";
-static int offs_call_set_minutes = 13;
+static BYTE pattern_call_set_minutes[15] =
+    "\xe9\xeb\x00\x00\x00"
+    "\x41\x83\xf8\x01"
+    "\x48\x8d\x54\x24\x40";
+static int offs_call_set_minutes = -4;
 
 // controller restrictions ("sider")
 /*
