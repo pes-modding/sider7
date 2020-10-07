@@ -2,6 +2,11 @@ Sider 7 Release History
 =======================
 
 
+October 6, 2020
+v7.0.2
+- another fix for "match.minutes": now works with 1.01.00 and 1.01.01 game exes
+
+
 September 27, 2020
 v7.0.1
 - fix for "match.minutes" option in sider.ini. It works again now.
