@@ -762,4 +762,21 @@ static BYTE pattern_clear_sc[18] =
     "\x8d\x6f\x02";
 static int offs_clear_sc = 0;
 
+/**
+00000001403F8D27 | FF50 10                  | call qword ptr ds:[rax+10]                 |
+00000001403F8D2A | 8B4B 0C                  | mov ecx,dword ptr ds:[rbx+C]               |
+00000001403F8D2D | 48:8D55 B8               | lea rdx,qword ptr ss:[rbp-48]              |
+00000001403F8D31 | E8 40C01A01              | call <JMP.&XInputGetState>                 | 1415A4D76
+... then to:
+00000001415A4D76 | FF25 AC02F900            | jmp qword ptr ds:[<&XInputGetState>]       |
+00000001415A4D7C | FF25 AE02F900            | jmp qword ptr ds:[<&XInputSetState>]       |
+00000001415A4D82 | CC                       | int3                                       |
+**/
+static BYTE pattern_xinput[12] =
+    "\xff\x50\x10"
+    "\x8b\x4b\x0c"
+    "\x48\x8d\x55\xb8"
+    "\xe8";
+static int offs_xinput = 11;
+
 #endif

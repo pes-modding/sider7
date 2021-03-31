@@ -393,6 +393,10 @@ lookup_cache_t *_lookup_cache(NULL);
 //typedef LONGLONG (*pfn_alloc_mem_t)(BUFFER_INFO *bi, LONGLONG size);
 //pfn_alloc_mem_t _org_alloc_mem;
 
+BYTE* get_target_location(BYTE *call_location);
+BYTE* get_target_location2(BYTE *rel_offs_location);
+void HookXInputGetState();
+
 LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK sider_foreground_idle_proc(int code, WPARAM wParam, LPARAM lParam);
 
@@ -407,21 +411,24 @@ HRESULT sider_CreateDXGIFactory1(REFIID riid, void **ppFactory);
 HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_SWAP_CHAIN_DESC *pDesc, IDXGISwapChain **ppSwapChain);
 HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags);
 
+typedef DWORD (*PFN_XInputGetState)(DWORD dwUserIndex, XINPUT_STATE *pState);
 typedef HRESULT (*PFN_IDirectInput8_CreateDevice)(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVICE * lplpDirectInputDevice, LPUNKNOWN pUnkOuter);
 typedef HRESULT (*PFN_IDirectInputDevice8_GetDeviceState)(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData);
-typedef HRESULT (*PFN_IDirectInputDevice8_GetDeviceData)(IDirectInputDevice8 *self, DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod,
-         LPDWORD pdwInOut, DWORD dwFlags);
-typedef HRESULT (*PFN_IDirectInputDevice8_Poll)(IDirectInputDevice8 *self);
+//typedef HRESULT (*PFN_IDirectInputDevice8_GetDeviceData)(IDirectInputDevice8 *self, DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod,
+//         LPDWORD pdwInOut, DWORD dwFlags);
+//typedef HRESULT (*PFN_IDirectInputDevice8_Poll)(IDirectInputDevice8 *self);
+PFN_XInputGetState _org_XInputGetState;
 PFN_IDirectInput8_CreateDevice _org_CreateDevice;
 PFN_IDirectInputDevice8_GetDeviceState _org_GetDeviceStateKeyboard;
 PFN_IDirectInputDevice8_GetDeviceState _org_GetDeviceStateGamepad;
-PFN_IDirectInputDevice8_GetDeviceData _org_GetDeviceData;
-PFN_IDirectInputDevice8_Poll _org_Poll;
+//PFN_IDirectInputDevice8_GetDeviceData _org_GetDeviceData;
+//PFN_IDirectInputDevice8_Poll _org_Poll;
+DWORD sider_XInputGetState(DWORD dwUserIndex, XINPUT_STATE *pState);
 HRESULT sider_CreateDevice(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVICE * lplpDirectInputDevice, LPUNKNOWN pUnkOuter);
 HRESULT sider_GetDeviceStateKeyboard(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData);
 HRESULT sider_GetDeviceStateGamepad(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData);
-HRESULT sider_GetDeviceData(IDirectInputDevice8 *self, DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags);
-HRESULT sider_Poll(IDirectInputDevice8 *self);
+//HRESULT sider_GetDeviceData(IDirectInputDevice8 *self, DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags);
+//HRESULT sider_Poll(IDirectInputDevice8 *self);
 map<BYTE**, BYTE*> _vtables;
 
 BOOL sider_device_enum_callback(LPCDIDEVICEINSTANCE lppdi, LPVOID pvRef);
@@ -429,6 +436,7 @@ BOOL sider_device_enum_callback(LPCDIDEVICEINSTANCE lppdi, LPVOID pvRef);
 BOOL sider_object_enum_callback(LPCDIDEVICEOBJECTINSTANCE lpddoi, LPVOID pvRef);
 void init_direct_input();
 void enumerate_controllers();
+BYTE **_xinput_get_state_holder(NULL);
 
 ID3D11Device *_device(NULL);
 ID3D11DeviceContext *_device_context(NULL);
@@ -1865,8 +1873,10 @@ void set_controller_poll_delay() {
 BOOL sider_device_enum_callback(LPCDIDEVICEINSTANCE lppdi, LPVOID pvRef)
 {
     log_(L"controller: type: %x name: %s\n", lppdi->dwDevType, lppdi->tszInstanceName);
-    g_controller_guid_instance = lppdi->guidInstance;
-    _has_controller = true;
+    if (!_has_controller) {
+        g_controller_guid_instance = lppdi->guidInstance;
+        _has_controller = true;
+    }
     return DIENUM_CONTINUE;
 }
 
@@ -3912,13 +3922,6 @@ HRESULT sider_CreateDevice(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVI
     return res;
 }
 
-HRESULT sider_GetDeviceData(IDirectInputDevice8 *self, DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags)
-{
-    logu_("sider_GetDeviceData called for %p\n", self);
-    HRESULT res = _org_GetDeviceData(self, cbObjectData, rgdod, pdwInOut, dwFlags);
-    return res;
-}
-
 HRESULT sider_GetDeviceStateGamepad(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData)
 {
     DBG(16384) logu_("sider_GetDeviceStateGamepad(self:%p): called\n", self);
@@ -3960,20 +3963,39 @@ HRESULT sider_GetDeviceStateKeyboard(IDirectInputDevice8 *self, DWORD cbData, LP
     **/
     HRESULT res = _org_GetDeviceStateKeyboard(self, cbData, lpvData);
     if (_overlay_on) {
-        if (g_IDirectInputDevice8 && self != g_IDirectInputDevice8) {
-            // block input to game
-            return DIERR_INPUTLOST;
-        }
+        // block input to game
+        return DIERR_INPUTLOST;
     }
     DBG(16384) logu_("sider_GetDeviceStateKeyboard(self:%p): res = %x\n", self, res);
     return res;
 }
 
-HRESULT sider_Poll(IDirectInputDevice8 *self)
+DWORD sider_XInputGetState(DWORD dwUserIndex, XINPUT_STATE *pState)
 {
-    logu_("sider_Poll called for %p\n", self);
-    HRESULT res = _org_Poll(self);
+    DBG(16384) logu_("sider_XInputGetState(dwUserIndex:%x, pState:%p): called\n", dwUserIndex, pState);
+    if (_overlay_on) {
+        // block input to game
+        return ERROR_SUCCESS;
+    }
+    DWORD res = _org_XInputGetState(dwUserIndex, pState);
     return res;
+}
+
+void HookXInputGetState()
+{
+    log_(L"XInputGetState: %p\n", XInputGetState);
+    BYTE *jmp_xinput_get_state = get_target_location2(_config->_hp_at_xinput);
+    if (jmp_xinput_get_state) {
+        _xinput_get_state_holder = (BYTE**)get_target_location(jmp_xinput_get_state);
+        log_(L"xinput_get_state_holder: %p\n", _xinput_get_state_holder);
+        if (_xinput_get_state_holder) {
+            _org_XInputGetState = (PFN_XInputGetState)(*_xinput_get_state_holder);
+            log_(L"_org_XInputGetState: %p\n", _org_XInputGetState);
+
+            *_xinput_get_state_holder = (BYTE*)sider_XInputGetState;
+            log_(L"now XInputGetState: %p\n", *_xinput_get_state_holder);
+        }
+    }
 }
 
 HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags)
@@ -6459,7 +6481,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 37
+#define NUM_PATTERNS 38
     BYTE *frag[NUM_PATTERNS+1];
     frag[1] = lcpk_pattern_at_read_file;
     frag[2] = lcpk_pattern_at_get_size;
@@ -6498,6 +6520,7 @@ DWORD install_func(LPVOID thread_param) {
     frag[35] = pattern2_call_to_move;
     frag[36] = pattern_copy_clock;
     frag[37] = pattern_clear_sc;
+    frag[38] = pattern_xinput;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[1] = 24;
@@ -6554,6 +6577,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[35] = _config->_lua_enabled ? sizeof(pattern2_call_to_move)-1 : 0;
     frag_len[36] = _config->_lua_enabled ? sizeof(pattern_copy_clock)-1 : 0;
     frag_len[37] = _config->_lua_enabled ? sizeof(pattern_clear_sc)-1 : 0;
+    frag_len[38] = _config->_lua_enabled ? sizeof(pattern_xinput)-1 : 0;
 
     int offs[NUM_PATTERNS+1];
     offs[1] = lcpk_offs_at_read_file;
@@ -6593,6 +6617,7 @@ DWORD install_func(LPVOID thread_param) {
     offs[35] = offs2_call_to_move;
     offs[36] = offs_copy_clock;
     offs[37] = offs_clear_sc;
+    offs[38] = offs_xinput;
 
     BYTE **addrs[NUM_PATTERNS+1];
     addrs[1] = &_config->_hp_at_read_file;
@@ -6632,6 +6657,7 @@ DWORD install_func(LPVOID thread_param) {
     addrs[35] = &_config->_hp_at_call_to_move;
     addrs[36] = &_config->_hp_at_copy_clock;
     addrs[37] = &_config->_hp_at_clear_sc;
+    addrs[38] = &_config->_hp_at_xinput;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -6748,6 +6774,7 @@ bool all_found(config_t *cfg) {
             cfg->_hp_at_uniparam_loaded > 0 &&
             cfg->_hp_at_copy_clock > 0 &&
             cfg->_hp_at_clear_sc > 0 &&
+            cfg->_hp_at_xinput > 0 &&
             true
         );
     }
@@ -6931,6 +6958,9 @@ bool hook_if_all_found() {
                 (BYTE*)pattern_def_stadium_name_head, sizeof(pattern_def_stadium_name_head)-1,
                 (BYTE*)pattern_def_stadium_name_tail, sizeof(pattern_def_stadium_name_tail)-1,
                 old_moved_call, new_moved_call);
+
+            HookXInputGetState();
+
             log_(L"-------------------------------\n");
         }
 
