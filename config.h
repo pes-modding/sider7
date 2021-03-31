@@ -33,6 +33,7 @@ using namespace std;
 #define DEFAULT_GAMEPAD_OVERLAY_POLL_INTERVAL_MSEC 32
 #define DEFAULT_CACHE_SIZE 32
 #define DEFAULT_MATCH_STATS_ENABLED false
+#define DEFAULT_GLOBAL_BLOCK_INPUT false
 
 extern wchar_t sider_dir[MAX_PATH];
 
@@ -61,6 +62,7 @@ public:
     bool _start_minimized;
     bool _free_side_select;
     bool _match_stats_enabled;
+    bool _global_block_input;
     bool _overlay_enabled;
     bool _overlay_on_from_start;
     wstring _overlay_font;
@@ -132,6 +134,7 @@ public:
                  _start_minimized(false),
                  _free_side_select(false),
                  _match_stats_enabled(DEFAULT_MATCH_STATS_ENABLED),
+                 _global_block_input(DEFAULT_GLOBAL_BLOCK_INPUT),
                  _start_game(L""),
                  _overlay_enabled(false),
                  _overlay_on_from_start(false),
@@ -389,6 +392,10 @@ public:
 
         _match_stats_enabled = GetPrivateProfileInt(_section_name.c_str(),
             L"match-stats.enabled", _match_stats_enabled,
+            config_ini);
+
+        _global_block_input = GetPrivateProfileInt(_section_name.c_str(),
+            L"overlay.block-input-when-on", _global_block_input,
             config_ini);
 
         _overlay_enabled = GetPrivateProfileInt(_section_name.c_str(),

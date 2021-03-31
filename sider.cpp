@@ -480,8 +480,8 @@ struct dx11_t {
 };
 dx11_t DX11;
 
-IDirectInput8 *g_IDirectInput8;
-IDirectInputDevice8 *g_IDirectInputDevice8;
+IDirectInput8 *g_IDirectInput8(NULL);
+IDirectInputDevice8 *g_IDirectInputDevice8(NULL);
 GUID g_controller_guid_instance;
 bool _has_controller(false);
 bool _enumerated_controllers(false);
@@ -758,6 +758,7 @@ static HHOOK handle1 = 0;
 static HHOOK kb_handle = 0;
 
 bool _overlay_on(false);
+bool _block_input(false);
 bool _reload_1_down(false);
 bool _reload_modified(false);
 bool _is_game(false);
@@ -3937,8 +3938,8 @@ HRESULT sider_GetDeviceStateGamepad(IDirectInputDevice8 *self, DWORD cbData, LPV
     HRESULT res = org_f(self, cbData, lpvData);
     **/
     HRESULT res = _org_GetDeviceStateGamepad(self, cbData, lpvData);
-    if (_overlay_on) {
-        if (g_IDirectInputDevice8 && self != g_IDirectInputDevice8) {
+    if (_overlay_on && (_config->_global_block_input || _block_input)) {
+        if (self != g_IDirectInputDevice8) {
             // block input to game
             return DIERR_INPUTLOST;
         }
@@ -3962,7 +3963,7 @@ HRESULT sider_GetDeviceStateKeyboard(IDirectInputDevice8 *self, DWORD cbData, LP
     HRESULT res = org_f(self, cbData, lpvData);
     **/
     HRESULT res = _org_GetDeviceStateKeyboard(self, cbData, lpvData);
-    if (_overlay_on) {
+    if (_overlay_on && (_config->_global_block_input || _block_input)) {
         // block input to game
         return DIERR_INPUTLOST;
     }
@@ -3973,7 +3974,7 @@ HRESULT sider_GetDeviceStateKeyboard(IDirectInputDevice8 *self, DWORD cbData, LP
 DWORD sider_XInputGetState(DWORD dwUserIndex, XINPUT_STATE *pState)
 {
     DBG(16384) logu_("sider_XInputGetState(dwUserIndex:%x, pState:%p): called\n", dwUserIndex, pState);
-    if (_overlay_on) {
+    if (_overlay_on && (_config->_global_block_input || _block_input)) {
         // block input to game
         return ERROR_SUCCESS;
     }
@@ -6425,6 +6426,7 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"overlay.vkey.prev-module = 0x%02x\n", _config->_overlay_vkey_prev_module);
     log_(L"overlay.toggle.sound = %s\n", _config->_overlay_toggle_sound.c_str());
     log_(L"overlay.toggle.sound-volume = %0.2f\n", _config->_overlay_toggle_sound_volume);
+    log_(L"overlay.block-input-when-on = %d\n", _config->_global_block_input);
     log_(L"match-stats.enabled = %d\n", _config->_match_stats_enabled);
     log_(L"vkey.reload-1 = 0x%02x\n", _config->_vkey_reload_1);
     log_(L"vkey.reload-2 = 0x%02x\n", _config->_vkey_reload_2);
