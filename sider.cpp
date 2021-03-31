@@ -406,10 +406,29 @@ PFN_IDXGISwapChain_Present _org_Present(NULL);
 HRESULT sider_CreateDXGIFactory1(REFIID riid, void **ppFactory);
 HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_SWAP_CHAIN_DESC *pDesc, IDXGISwapChain **ppSwapChain);
 HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags);
+
+typedef HRESULT (*PFN_IDirectInput8_CreateDevice)(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVICE * lplpDirectInputDevice, LPUNKNOWN pUnkOuter);
+typedef HRESULT (*PFN_IDirectInputDevice8_GetDeviceState)(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData);
+typedef HRESULT (*PFN_IDirectInputDevice8_GetDeviceData)(IDirectInputDevice8 *self, DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod,
+         LPDWORD pdwInOut, DWORD dwFlags);
+typedef HRESULT (*PFN_IDirectInputDevice8_Poll)(IDirectInputDevice8 *self);
+PFN_IDirectInput8_CreateDevice _org_CreateDevice;
+PFN_IDirectInputDevice8_GetDeviceState _org_GetDeviceStateKeyboard;
+PFN_IDirectInputDevice8_GetDeviceState _org_GetDeviceStateGamepad;
+PFN_IDirectInputDevice8_GetDeviceData _org_GetDeviceData;
+PFN_IDirectInputDevice8_Poll _org_Poll;
+HRESULT sider_CreateDevice(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVICE * lplpDirectInputDevice, LPUNKNOWN pUnkOuter);
+HRESULT sider_GetDeviceStateKeyboard(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData);
+HRESULT sider_GetDeviceStateGamepad(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData);
+HRESULT sider_GetDeviceData(IDirectInputDevice8 *self, DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags);
+HRESULT sider_Poll(IDirectInputDevice8 *self);
+map<BYTE**, BYTE*> _vtables;
+
 BOOL sider_device_enum_callback(LPCDIDEVICEINSTANCE lppdi, LPVOID pvRef);
 BOOL sider_device_enum_callback(LPCDIDEVICEINSTANCE lppdi, LPVOID pvRef);
 BOOL sider_object_enum_callback(LPCDIDEVICEOBJECTINSTANCE lpddoi, LPVOID pvRef);
 void init_direct_input();
+void enumerate_controllers();
 
 ID3D11Device *_device(NULL);
 ID3D11DeviceContext *_device_context(NULL);
@@ -457,6 +476,7 @@ IDirectInput8 *g_IDirectInput8;
 IDirectInputDevice8 *g_IDirectInputDevice8;
 GUID g_controller_guid_instance;
 bool _has_controller(false);
+bool _enumerated_controllers(false);
 bool _controller_prepped(false);
 bool _controller_poll_initialized(false);
 bool _controller_poll(false);
@@ -3798,13 +3818,176 @@ DWORD direct_input_poll(void *param) {
     return 0;
 }
 
+void HookVtblMethod(void *self, int idx, map<BYTE**,BYTE*>* vtables, void *new_func, char *name)
+{
+    BYTE** vtbl = *(BYTE***)self;
+    BYTE *f = vtbl[idx];
+
+    //DBG(64) logu_("current %s = %p\n", name, f);
+    if ((BYTE*)f == (BYTE*)new_func) {
+        //DBG(64) logu_("%s already hooked.\n", name);
+    }
+    else {
+        lock_t lock(&_cs);
+        logu_("Hooking %s\n", name);
+        vtables->insert(pair<BYTE**,BYTE*>(vtbl, f));
+        logu_("org %s = %p\n", name, f);
+
+        DWORD protection = 0;
+        DWORD newProtection = PAGE_EXECUTE_READWRITE;
+        if (VirtualProtect(vtbl+idx, 8, newProtection, &protection)) {
+            vtbl[idx] = (BYTE*)new_func;
+            f = vtbl[idx];
+            logu_("now %s = %p\n", name, f);
+        }
+        else {
+            logu_("ERROR: VirtualProtect failed for: %p\n", vtbl+idx);
+        }
+    }
+}
+
+void HookVtblMethod2(void *self, int idx, void **old_func, void *new_func, char *name)
+{
+    BYTE** vtbl = *(BYTE***)self;
+    BYTE *f = vtbl[idx];
+
+    //DBG(64) logu_("current %s = %p\n", name, f);
+    if ((BYTE*)f == (BYTE*)new_func) {
+        //DBG(64) logu_("%s already hooked.\n", name);
+    }
+    else {
+        lock_t lock(&_cs);
+        logu_("Hooking %s\n", name);
+        *old_func = f;
+        logu_("org %s = %p\n", name, f);
+
+        DWORD protection = 0;
+        DWORD newProtection = PAGE_EXECUTE_READWRITE;
+        if (VirtualProtect(vtbl+idx, 8, newProtection, &protection)) {
+            vtbl[idx] = (BYTE*)new_func;
+            f = vtbl[idx];
+            logu_("now %s = %p\n", name, f);
+        }
+        else {
+            logu_("ERROR: VirtualProtect failed for: %p\n", vtbl+idx);
+        }
+    }
+}
+
+HRESULT sider_CreateDevice(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVICE * lplpDirectInputDevice, LPUNKNOWN pUnkOuter)
+{
+    logu_("sider_CreateDevice(self:%p): called\n", self);
+    /**
+    map<BYTE**,BYTE*>::iterator it = _vtables.find(*(BYTE***)self);
+    if (it == _vtables.end()) {
+        // bad
+        logu_("unable to find vtable entry for self: %p\n");
+        return S_OK;
+    }
+    BYTE *f = it->second;
+    PFN_IDirectInput8_CreateDevice org_f = (PFN_IDirectInput8_CreateDevice)f;
+    HRESULT res = org_f(self, rguid, lplpDirectInputDevice, pUnkOuter);
+    **/
+    HRESULT res = _org_CreateDevice(self, rguid, lplpDirectInputDevice, pUnkOuter);
+
+    logu_("IDirectInput8::CreateDevice(%p, %p, %p, %p) returned: %p\n", self, rguid, lplpDirectInputDevice, pUnkOuter, *lplpDirectInputDevice);
+    wchar_t guid_str[256];
+    if (StringFromGUID2(rguid, guid_str, 256)) {
+        log_(L"rguid: %s\n", guid_str);
+    }
+    if (rguid == GUID_SysKeyboard) {
+        logu_("this is a keyboard device: %p\n", *lplpDirectInputDevice);
+        //HookVtblMethod(*lplpDirectInputDevice, 9, &_vtables, sider_GetDeviceState, "IDirectInputDevice8::GetDeviceState");
+        HookVtblMethod2(*lplpDirectInputDevice, 9, (void**)&_org_GetDeviceStateKeyboard, sider_GetDeviceStateKeyboard, "IDirectInputDevice8::GetDeviceState");
+    }
+    else if (rguid == GUID_SysMouse) {
+        logu_("this is a mouse device: %p\n", *lplpDirectInputDevice);
+        //HookVtblMethod(*lplpDirectInputDevice, 9, &_vtables, sider_GetDeviceState, "IDirectInputDevice8::GetDeviceState");
+    }
+    else {
+        logu_("this is some other device: %p\n", *lplpDirectInputDevice);
+        //HookVtblMethod(*lplpDirectInputDevice, 9, &_vtables, sider_GetDeviceState, "IDirectInputDevice8::GetDeviceState");
+        HookVtblMethod2(*lplpDirectInputDevice, 9, (void**)&_org_GetDeviceStateGamepad, sider_GetDeviceStateGamepad, "IDirectInputDevice8::GetDeviceState");
+    }
+    return res;
+}
+
+HRESULT sider_GetDeviceData(IDirectInputDevice8 *self, DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags)
+{
+    logu_("sider_GetDeviceData called for %p\n", self);
+    HRESULT res = _org_GetDeviceData(self, cbObjectData, rgdod, pdwInOut, dwFlags);
+    return res;
+}
+
+HRESULT sider_GetDeviceStateGamepad(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData)
+{
+    DBG(16384) logu_("sider_GetDeviceStateGamepad(self:%p): called\n", self);
+    /**
+    map<BYTE**,BYTE*>::iterator it = _vtables.find(*(BYTE***)self);
+    if (it == _vtables.end()) {
+        // bad
+        logu_("unable to find vtable entry for self: %p\n");
+        return S_OK;
+    }
+    BYTE *f = it->second;
+    PFN_IDirectInputDevice8_GetDeviceState org_f = (PFN_IDirectInputDevice8_GetDeviceState)f;
+    HRESULT res = org_f(self, cbData, lpvData);
+    **/
+    HRESULT res = _org_GetDeviceStateGamepad(self, cbData, lpvData);
+    if (_overlay_on) {
+        if (g_IDirectInputDevice8 && self != g_IDirectInputDevice8) {
+            // block input to game
+            return DIERR_INPUTLOST;
+        }
+    }
+    DBG(16384) logu_("sider_GetDeviceStateGamepad(self:%p): res = %x\n", self, res);
+    return res;
+}
+
+HRESULT sider_GetDeviceStateKeyboard(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData)
+{
+    DBG(16384) logu_("sider_GetDeviceStateKeyboard(self:%p): called\n", self);
+    /**
+    map<BYTE**,BYTE*>::iterator it = _vtables.find(*(BYTE***)self);
+    if (it == _vtables.end()) {
+        // bad
+        logu_("unable to find vtable entry for self: %p\n");
+        return S_OK;
+    }
+    BYTE *f = it->second;
+    PFN_IDirectInputDevice8_GetDeviceState org_f = (PFN_IDirectInputDevice8_GetDeviceState)f;
+    HRESULT res = org_f(self, cbData, lpvData);
+    **/
+    HRESULT res = _org_GetDeviceStateKeyboard(self, cbData, lpvData);
+    if (_overlay_on) {
+        if (g_IDirectInputDevice8 && self != g_IDirectInputDevice8) {
+            // block input to game
+            return DIERR_INPUTLOST;
+        }
+    }
+    DBG(16384) logu_("sider_GetDeviceStateKeyboard(self:%p): res = %x\n", self, res);
+    return res;
+}
+
+HRESULT sider_Poll(IDirectInputDevice8 *self)
+{
+    logu_("sider_Poll called for %p\n", self);
+    HRESULT res = _org_Poll(self);
+    return res;
+}
+
 HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags)
 {
     //logu_("Present called for swapChain: %p\n", swapChain);
     //logu_("Present:: gettop: %d\n", lua_gettop(L));
 
     if (kb_handle == NULL && _config->_overlay_enabled) {
-        kb_handle = SetWindowsHookEx(WH_KEYBOARD, sider_keyboard_proc, myHDLL, GetCurrentThreadId());
+        kb_handle = SetWindowsHookEx(WH_KEYBOARD, sider_keyboard_proc, NULL, GetCurrentThreadId());
+        logu_("kb_handle = %p\n", kb_handle);
+    }
+
+    if (!_enumerated_controllers) {
+        enumerate_controllers();
     }
 
     if (_reload_modified) {
@@ -6781,62 +6964,75 @@ void init_direct_input()
 {
     // initialize DirectInput
     g_IDirectInput8 = NULL;
-    if (!_gamepad_config->_dinput_enabled) {
-        return;
-    }
     if (SUCCEEDED(DirectInput8Create(
         myHDLL, DIRECTINPUT_VERSION, IID_IDirectInput8,
         (void**)&g_IDirectInput8, NULL))) {
         logu_("g_IDirectInput8 = %p\n", g_IDirectInput8);
 
-        // enumerate devices
-        _has_controller = false;
-        logu_("Enumerating game controllers\n");
-        if (SUCCEEDED(g_IDirectInput8->EnumDevices(
-            DI8DEVCLASS_GAMECTRL, sider_device_enum_callback, NULL, DIEDFL_ALLDEVICES))) {
-            logu_("Done enumerating game controllers\n");
-
-            if (_has_controller) {
-                g_IDirectInputDevice8 = NULL;
-                if (SUCCEEDED(g_IDirectInput8->CreateDevice(
-                    g_controller_guid_instance, &g_IDirectInputDevice8, NULL))) {
-                    logu_("DirectInputDevice created: %p\n", g_IDirectInputDevice8);
-
-                    // enumerate buttons and prepare data format
-                    if (SUCCEEDED(g_IDirectInputDevice8->EnumObjects(
-                        sider_object_enum_callback, NULL, DIDFT_PSHBUTTON | DIDFT_AXIS | DIDFT_POV))) {
-                        logu_("number of inputs: %d\n", _di_objects.size());
-
-                        memset(&_data_format, 0, sizeof(DIDATAFORMAT));
-                        _data_format.dwSize = sizeof(DIDATAFORMAT);
-                        _data_format.dwObjSize = sizeof(DIOBJECTDATAFORMAT);
-                        _data_format.dwFlags = DIDF_ABSAXIS;
-                        _data_format.dwDataSize = sizeof(_controller_buttons);
-                        _data_format.dwNumObjs = _di_objects.size();
-                        size_t rgodf_size = sizeof(DIOBJECTDATAFORMAT) * _di_objects.size();
-                        _data_format.rgodf = (LPDIOBJECTDATAFORMAT)malloc(rgodf_size);
-                        int i = 0;
-                        vector<DIDEVICEOBJECTINSTANCE>::iterator it;
-                        for (it = _di_objects.begin(); it != _di_objects.end(); it++, i++) {
-                            _data_format.rgodf[i].pguid = &it->guidType;
-                            _data_format.rgodf[i].dwOfs = it->dwOfs;
-                            _data_format.rgodf[i].dwType = it->dwType;
-                            _data_format.rgodf[i].dwFlags = 0;
-                        }
-
-                        _controller_prepped = false;
-                        memset(_controller_buttons, 0, sizeof(_controller_buttons));
-                        memset(_prev_controller_buttons, 0, sizeof(_prev_controller_buttons));
-                    }
-                }
-            }
-        }
-        else {
-            logu_("PROBLEM enumerating game controllers\n");
-        }
+        // hook CreateDevice
+        //HookVtblMethod(g_IDirectInput8, 3, &_vtables, sider_CreateDevice, "IDirectInput8::CreateDevice");
+        HookVtblMethod2(g_IDirectInput8, 3, (void**)&_org_CreateDevice, sider_CreateDevice, "IDirectInput8::CreateDevice");
     }
     else {
         logu_("PROBLEM creating DirectInput interface\n");
+    }
+
+    if (!_gamepad_config->_dinput_enabled) {
+        return;
+    }
+}
+
+void enumerate_controllers()
+{
+    _enumerated_controllers = true;
+    if (!_gamepad_config->_dinput_enabled) {
+        return;
+    }
+
+    // enumerate devices
+    _has_controller = false;
+    logu_("Enumerating game controllers\n");
+    if (SUCCEEDED(g_IDirectInput8->EnumDevices(
+        DI8DEVCLASS_GAMECTRL, sider_device_enum_callback, NULL, DIEDFL_ALLDEVICES))) {
+        logu_("Done enumerating game controllers\n");
+
+        if (_has_controller) {
+            g_IDirectInputDevice8 = NULL;
+            if (SUCCEEDED(g_IDirectInput8->CreateDevice(
+                g_controller_guid_instance, &g_IDirectInputDevice8, NULL))) {
+                logu_("DirectInputDevice created: %p\n", g_IDirectInputDevice8);
+
+                // enumerate buttons and prepare data format
+                if (SUCCEEDED(g_IDirectInputDevice8->EnumObjects(
+                    sider_object_enum_callback, NULL, DIDFT_PSHBUTTON | DIDFT_AXIS | DIDFT_POV))) {
+                    logu_("number of inputs: %d\n", _di_objects.size());
+
+                    memset(&_data_format, 0, sizeof(DIDATAFORMAT));
+                    _data_format.dwSize = sizeof(DIDATAFORMAT);
+                    _data_format.dwObjSize = sizeof(DIOBJECTDATAFORMAT);
+                    _data_format.dwFlags = DIDF_ABSAXIS;
+                    _data_format.dwDataSize = sizeof(_controller_buttons);
+                    _data_format.dwNumObjs = _di_objects.size();
+                    size_t rgodf_size = sizeof(DIOBJECTDATAFORMAT) * _di_objects.size();
+                    _data_format.rgodf = (LPDIOBJECTDATAFORMAT)malloc(rgodf_size);
+                    int i = 0;
+                    vector<DIDEVICEOBJECTINSTANCE>::iterator it;
+                    for (it = _di_objects.begin(); it != _di_objects.end(); it++, i++) {
+                        _data_format.rgodf[i].pguid = &it->guidType;
+                        _data_format.rgodf[i].dwOfs = it->dwOfs;
+                        _data_format.rgodf[i].dwType = it->dwType;
+                        _data_format.rgodf[i].dwFlags = 0;
+                    }
+
+                    _controller_prepped = false;
+                    memset(_controller_buttons, 0, sizeof(_controller_buttons));
+                    memset(_prev_controller_buttons, 0, sizeof(_prev_controller_buttons));
+                }
+            }
+        }
+    }
+    else {
+        logu_("PROBLEM enumerating game controllers\n");
     }
 }
 
