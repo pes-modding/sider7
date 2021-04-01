@@ -1,8 +1,8 @@
 --[[
 =========================
 
-inputdemo module
-Requires: sider.dll 5.2.1
+inputdemo module v2.0
+Requires: sider.dll 7.1.0+
 
 Demonstrates usage of: "overlay_on", "key_down" and "gamepad_input" events
 
@@ -23,18 +23,25 @@ sticks and gamepads. The handler receives two parameters: ctx and inputs
 --]]
 
 local m = {}
-local version = "1.0"
+local version = "2.0"
 
+local flag
 local text = ""
 local lines = {}
 local MAX_LINES = 20
 
 function m.overlay_on(ctx)
-    return string.format([[version %s
+    return string.format([[version %s | input blocked: %s
 Press buttons on keyboard, move sticks or press buttons on gamepad
+Toggle input blocking on/off with [0] key
 Last %s events:
 
-%s]], version, MAX_LINES, text)
+%s]], version, flag, MAX_LINES, text)
+end
+
+function m.show(ctx)
+    ctx.set_input_blocked(flag)
+    flag = ctx.get_input_blocked()
 end
 
 local function get_last(t, n)
@@ -47,9 +54,19 @@ local function get_last(t, n)
 end
 
 function m.key_down(ctx, vkey)
-    lines[#lines + 1] = string.format("Keyboard input event: vkey=0x%x", vkey)
+    lines[#lines + 1] = string.format("Key down: vkey=0x%x", vkey)
     lines = get_last(lines, MAX_LINES)
     text = table.concat(lines, '\n')
+end
+
+function m.key_up(ctx, vkey)
+    lines[#lines + 1] = string.format("Key up: vkey=0x%x", vkey)
+    lines = get_last(lines, MAX_LINES)
+    text = table.concat(lines, '\n')
+    if vkey == 0x30 then
+        flag = not flag
+        ctx.set_input_blocked(flag)
+    end
 end
 
 function m.gamepad_input(ctx, inputs)
@@ -64,7 +81,9 @@ function m.init(ctx)
     -- register for events
     ctx.register("overlay_on", m.overlay_on)
     ctx.register("key_down", m.key_down)
+    ctx.register("key_up", m.key_up)
     ctx.register("gamepad_input", m.gamepad_input)
+    ctx.register("show", m.show)
 end
 
 return m
