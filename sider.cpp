@@ -1608,6 +1608,8 @@ struct module_t {
     int evt_key_down;
     int evt_key_up;
     int evt_gamepad_input;
+    int evt_show;
+    int evt_hide;
 };
 vector<module_t*> _modules;
 module_t* _curr_m;
@@ -2522,6 +2524,41 @@ char *module_stadium_name(module_t *m, char *name, BYTE stadium_id, SCHEDULE_ENT
     return res;
 }
 
+void module_show(module_t *m)
+{
+    if (m->evt_show != 0) {
+        EnterCriticalSection(&_cs);
+        lua_pushvalue(m->L, m->evt_show);
+        lua_xmove(m->L, L, 1);
+        // push params
+        lua_pushvalue(L, 1); // ctx
+        if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+            const char *err = luaL_checkstring(L, -1);
+            logu_("[%d] lua ERROR from module_show: %s\n", GetCurrentThreadId(), err);
+            lua_pop(L, 1);
+        }
+        LeaveCriticalSection(&_cs);
+    }
+}
+
+void module_hide(module_t *m)
+{
+    EnterCriticalSection(&_cs);
+    if (m->evt_hide != 0) {
+        lua_pushvalue(m->L, m->evt_hide);
+        lua_xmove(m->L, L, 1);
+        // push params
+        lua_pushvalue(L, 1); // ctx
+        if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+            const char *err = luaL_checkstring(L, -1);
+            logu_("[%d] lua ERROR from module_hide: %s\n", GetCurrentThreadId(), err);
+            lua_pop(L, 1);
+        }
+    }
+    _block_input = false;
+    LeaveCriticalSection(&_cs);
+}
+
 void module_overlay_on(module_t *m, char **text, char **image_path, struct layout_t *opts)
 {
     *text = NULL;
@@ -3387,9 +3424,22 @@ void draw_ui(float top, float bottom, float right_margin)
     g_pRenderTargetView->Release();
 }
 
+void sider_dispatch_show_hide_events(bool on)
+{
+    if (_curr_overlay_m != _modules.end()) {
+        if (on) {
+            module_show(*_curr_overlay_m);
+        }
+        else {
+            module_hide(*_curr_overlay_m);
+        }
+    }
+}
+
 void sider_switch_overlay_to_prev_module()
 {
     if (_curr_overlay_m != _modules.end()) {
+        module_hide(*_curr_overlay_m);
         // previous module
         vector<module_t*>::iterator j = _curr_overlay_m;
         do {
@@ -3401,6 +3451,7 @@ void sider_switch_overlay_to_prev_module()
             if (m->evt_overlay_on) {
                 log_(L"now active module on overlay: %s\n", m->filename->c_str());
                 _curr_overlay_m = j;
+                module_show(*_curr_overlay_m);
                 break;
             }
         }
@@ -3412,6 +3463,7 @@ void sider_switch_overlay_to_prev_module()
 void sider_switch_overlay_to_next_module()
 {
     if (_curr_overlay_m != _modules.end()) {
+        module_hide(*_curr_overlay_m);
         // next module
         vector<module_t*>::iterator j = _curr_overlay_m;
         do {
@@ -3423,6 +3475,7 @@ void sider_switch_overlay_to_next_module()
             if (m->evt_overlay_on) {
                 log_(L"now active module on overlay: %s\n", m->filename->c_str());
                 _curr_overlay_m = j;
+                module_show(*_curr_overlay_m);
                 break;
             }
         }
@@ -3552,6 +3605,7 @@ DWORD direct_input_poll(void *param) {
                         if (b1==1 && b2==1 && (was_b1!=b1 || was_b2!=b2)) {
                             _overlay_on = !_overlay_on;
                             play_overlay_toggle_sound();
+                            sider_dispatch_show_hide_events(_overlay_on);
                             handled = true;
                             _toggle_sequence_on = true;
                             DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
@@ -3703,6 +3757,7 @@ DWORD direct_input_poll(void *param) {
                     if (b1!=0 && b2!=0 && (was_b1!=b1 || was_b2!=b2)) {
                         _overlay_on = !_overlay_on;
                         play_overlay_toggle_sound();
+                        sider_dispatch_show_hide_events(_overlay_on);
                         handled = true;
                         _toggle_sequence_on = true;
                         DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
@@ -5611,6 +5666,20 @@ static int sider_context_refresh_kit(lua_State *L)
     return 0;
 }
 
+static int sider_context_get_input_blocked(lua_State *L)
+{
+    lua_pushboolean(L, _block_input);
+    return 1;
+}
+
+static int sider_context_set_input_blocked(lua_State *L)
+{
+    int val = lua_toboolean(L, 1);
+    _block_input = (val != 0);
+    lua_pop(L, 1);
+    return 0;
+}
+
 static int sider_context_register(lua_State *L)
 {
     const char *event_key = luaL_checkstring(L, 1);
@@ -5749,6 +5818,18 @@ static int sider_context_register(lua_State *L)
         _curr_m->evt_get_ball_name = lua_gettop(_curr_m->L);
         logu_("Registered for \"%s\" event\n", event_key);
     }
+    else if (strcmp(event_key, "show")==0) {
+        lua_pushvalue(L, -1);
+        lua_xmove(L, _curr_m->L, 1);
+        _curr_m->evt_show = lua_gettop(_curr_m->L);
+        logu_("Registered for \"%s\" event\n", event_key);
+    }
+    else if (strcmp(event_key, "hide")==0) {
+        lua_pushvalue(L, -1);
+        lua_xmove(L, _curr_m->L, 1);
+        _curr_m->evt_hide = lua_gettop(_curr_m->L);
+        logu_("Registered for \"%s\" event\n", event_key);
+    }
     else if (strcmp(event_key, "overlay_on")==0) {
         lua_pushvalue(L, -1);
         lua_xmove(L, _curr_m->L, 1);
@@ -5825,6 +5906,10 @@ static void push_context_table(lua_State *L)
 
     lua_pushcfunction(L, sider_context_register);
     lua_setfield(L, -2, "register");
+    lua_pushcfunction(L, sider_context_get_input_blocked);
+    lua_setfield(L, -2, "get_input_blocked");
+    lua_pushcfunction(L, sider_context_set_input_blocked);
+    lua_setfield(L, -2, "set_input_blocked");
 
     lua_newtable(L);
     lua_pushcfunction(L, sider_context_get_current_team_id);
@@ -7311,6 +7396,7 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
         if (wParam == _config->_overlay_vkey_toggle && ((lParam & 0x80000000) != 0)) {
             _overlay_on = !_overlay_on;
             play_overlay_toggle_sound();
+            sider_dispatch_show_hide_events(_overlay_on);
             DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
             if (_overlay_on) {
                 _overlay_image.to_clear = true;
