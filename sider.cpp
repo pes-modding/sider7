@@ -758,6 +758,7 @@ static HHOOK kb_handle = 0;
 
 bool _overlay_on(false);
 bool _block_input(false);
+bool _hard_block(false);
 bool _reload_1_down(false);
 bool _reload_modified(false);
 bool _is_game(false);
@@ -2557,6 +2558,7 @@ void module_hide(module_t *m)
         }
     }
     _block_input = false;
+    _hard_block = false;
     LeaveCriticalSection(&_cs);
 }
 
@@ -4073,6 +4075,7 @@ HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags)
         clear_overlay_texture();
         lua_reload_modified_modules();
         _reload_modified = false;
+        _reload_1_down = false;
     }
 
     // process priority
@@ -5670,13 +5673,22 @@ static int sider_context_refresh_kit(lua_State *L)
 static int sider_input_is_blocked(lua_State *L)
 {
     lua_pushboolean(L, _block_input);
-    return 1;
+    lua_pushboolean(L, _hard_block);
+    return 2;
 }
 
 static int sider_input_set_blocked(lua_State *L)
 {
-    int val = lua_toboolean(L, 1);
-    lua_pop(L, 1);
+    int val = 0;
+    if (lua_gettop(L) > 0) {
+        val = lua_toboolean(L, 1);
+        lua_pop(L, 1);
+    }
+    int hard = 0;
+    if (lua_gettop(L) > 0) {
+        hard = lua_toboolean(L, 1);
+        lua_pop(L, 1);
+    }
     module_t *m = (module_t*)lua_topointer(L, lua_upvalueindex(1));
     if (!m) {
         lua_pushstring(L, "fatal problem: current module is unknown");
@@ -5688,6 +5700,7 @@ static int sider_input_set_blocked(lua_State *L)
         return lua_error(L);
     }
     _block_input = (val != 0);
+    _hard_block = (hard != 0) && _block_input;
     return 0;
 }
 
@@ -7414,7 +7427,7 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
     }
 
     if (code == HC_ACTION) {
-        if (wParam == _config->_overlay_vkey_toggle && ((lParam & 0x80000000) != 0)) {
+        if (!(_block_input && _hard_block) && wParam == _config->_overlay_vkey_toggle && ((lParam & 0x80000000) != 0)) {
             _overlay_on = !_overlay_on;
             play_overlay_toggle_sound();
             sider_dispatch_show_hide_events(_overlay_on);
@@ -7423,12 +7436,12 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
                 _overlay_image.to_clear = true;
             }
         }
-        else if (wParam == _config->_vkey_reload_2 && ((lParam & 0x80000000) != 0)) {
+        else if (!(_block_input && _hard_block) && wParam == _config->_vkey_reload_2 && ((lParam & 0x80000000) != 0)) {
             if (_reload_1_down) {
                 _reload_modified = true;
             }
         }
-        else if (wParam == _config->_vkey_reload_1 && ((lParam & 0x80000000) == 0)) {
+        else if (!(_block_input && _hard_block) && wParam == _config->_vkey_reload_1 && ((lParam & 0x80000000) == 0)) {
             _reload_1_down = ((lParam & 0x80000000) == 0);
         }
 
@@ -7439,10 +7452,10 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
                 if (_curr_overlay_m != _modules.end()) {
                     // module switching keys
                     // "[" - 0xdb, "]" - 0xdd, "~" - 0xc0, "1" - 0x31
-                    if (wParam == _config->_overlay_vkey_next_module) {
+                    if (!(_block_input && _hard_block) && wParam == _config->_overlay_vkey_next_module) {
                         sider_switch_overlay_to_next_module();
                     }
-                    else if (wParam == _config->_overlay_vkey_prev_module) {
+                    else if (!(_block_input && _hard_block) && wParam == _config->_overlay_vkey_prev_module) {
                         sider_switch_overlay_to_prev_module();
                     }
                     else {
