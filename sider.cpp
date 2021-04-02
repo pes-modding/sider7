@@ -309,7 +309,6 @@ void set_context_field_int(const char *name, int value);
 void set_context_field_nil(const char *name);
 void clear_context();
 void lua_reload_modified_modules();
-static void push_env_table(lua_State *L, const wchar_t *script_name);
 
 const char *_context_fields[] = {
     "match_id", "match_info", "match_leg",// "match_time",
@@ -1614,6 +1613,8 @@ struct module_t {
 vector<module_t*> _modules;
 module_t* _curr_m;
 vector<module_t*>::iterator _curr_overlay_m;
+
+static void push_env_table(lua_State *L, module_t* m);
 
 bool init_paths() {
     wchar_t *p;
@@ -5666,17 +5667,27 @@ static int sider_context_refresh_kit(lua_State *L)
     return 0;
 }
 
-static int sider_context_get_input_blocked(lua_State *L)
+static int sider_input_is_blocked(lua_State *L)
 {
     lua_pushboolean(L, _block_input);
     return 1;
 }
 
-static int sider_context_set_input_blocked(lua_State *L)
+static int sider_input_set_blocked(lua_State *L)
 {
     int val = lua_toboolean(L, 1);
-    _block_input = (val != 0);
     lua_pop(L, 1);
+    module_t *m = (module_t*)lua_topointer(L, lua_upvalueindex(1));
+    if (!m) {
+        lua_pushstring(L, "fatal problem: current module is unknown");
+        return lua_error(L);
+    }
+    module_t *om = (_curr_overlay_m == _modules.end()) ? NULL : (*_curr_overlay_m);
+    if (!om || m != om) {
+        lua_pushfstring(L, "only module that currently controls overlay can block input");
+        return lua_error(L);
+    }
+    _block_input = (val != 0);
     return 0;
 }
 
@@ -5906,11 +5917,8 @@ static void push_context_table(lua_State *L)
 
     lua_pushcfunction(L, sider_context_register);
     lua_setfield(L, -2, "register");
-    lua_pushcfunction(L, sider_context_get_input_blocked);
-    lua_setfield(L, -2, "get_input_blocked");
-    lua_pushcfunction(L, sider_context_set_input_blocked);
-    lua_setfield(L, -2, "set_input_blocked");
 
+    // ctx.kits
     lua_newtable(L);
     lua_pushcfunction(L, sider_context_get_current_team_id);
     lua_setfield(L, -2, "get_current_team");
@@ -5935,7 +5943,7 @@ static void push_context_table(lua_State *L)
     lua_setfield(L, -2, "kits");
 }
 
-static void push_env_table(lua_State *L, const wchar_t *script_name)
+static void push_env_table(lua_State *L, module_t *m)
 {
     char *sandbox[] = {
         "assert", "table", "pairs", "ipairs",
@@ -5986,10 +5994,20 @@ static void push_env_table(lua_State *L, const wchar_t *script_name)
     lua_pushcclosure(L, sider_log, 1);
     lua_settable(L, -3);
     lua_pushstring(L, "_FILE");
-    char *sname = (char*)Utf8::unicodeToUtf8(script_name);
+    char *sname = (char*)Utf8::unicodeToUtf8(m->filename->c_str());
     lua_pushstring(L, sname);
     Utf8::free(sname);
     lua_settable(L, -3);
+
+    // input table
+    lua_newtable(L);
+    lua_pushlightuserdata(L, m);
+    lua_pushcclosure(L, sider_input_is_blocked, 1);
+    lua_setfield(L, -2, "is_blocked");
+    lua_pushlightuserdata(L, m);
+    lua_pushcclosure(L, sider_input_set_blocked, 1);
+    lua_setfield(L, -2, "set_blocked");
+    lua_setfield(L, -2, "input");
 
     // memory lib
     lua_pushvalue(L, _memory_lib_index);
@@ -6179,8 +6197,15 @@ void init_lua_support()
                 continue;
             }
 
+            module_t *m = new module_t();
+            memset(m, 0, sizeof(module_t));
+            m->filename = new wstring(it->c_str());
+            m->last_modified = last_mod_time;
+            //m->cache = new lookup_cache_t(_config->_cache_size);
+            m->L = luaL_newstate();
+
             // set environment
-            push_env_table(L, it->c_str());
+            push_env_table(L, m);
             lua_setfenv(L, -2);
 
             // run the module
@@ -6212,12 +6237,6 @@ void init_lua_support()
                 continue;
             }
 
-            module_t *m = new module_t();
-            memset(m, 0, sizeof(module_t));
-            m->filename = new wstring(it->c_str());
-            m->last_modified = last_mod_time;
-            //m->cache = new lookup_cache_t(_config->_cache_size);
-            m->L = luaL_newstate();
             _curr_m = m;
 
             lua_pushvalue(L, 1); // ctx
@@ -6330,8 +6349,16 @@ void lua_reload_modified_modules()
             continue;
         }
 
+        module_t *newm = new module_t();
+        memset(newm, 0, sizeof(module_t));
+        newm->filename = new wstring(m->filename->c_str());
+        newm->last_modified = last_mod_time;
+        //newm->cache = new lookup_cache_t(_config->_cache_size);
+        newm->L = luaL_newstate();
+
         // set environment
-        push_env_table(L, m->filename->c_str());
+        // use the original pointer, because we will copy the module_t structure later
+        push_env_table(L, m);
         lua_setfenv(L, -2);
 
         // run the module
@@ -6363,12 +6390,6 @@ void lua_reload_modified_modules()
             continue;
         }
 
-        module_t *newm = new module_t();
-        memset(newm, 0, sizeof(module_t));
-        newm->filename = new wstring(m->filename->c_str());
-        newm->last_modified = last_mod_time;
-        //newm->cache = new lookup_cache_t(_config->_cache_size);
-        newm->L = luaL_newstate();
         _curr_m = newm;
 
         lua_pushvalue(L, 1); // ctx
