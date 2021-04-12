@@ -31,7 +31,7 @@ local lines = {}
 local MAX_LINES = 20
 
 function m.overlay_on(ctx)
-    return string.format([[version %s | input blocked: %s
+    return string.format([[version %s | game input blocked: %s
 Press buttons on keyboard, move sticks or press buttons on gamepad
 Toggle input blocking on/off with [0] key
 Last %s events:
@@ -40,8 +40,8 @@ Last %s events:
 end
 
 function m.show(ctx)
-    ctx.set_input_blocked(flag)
-    flag = ctx.get_input_blocked()
+    input.set_blocked(flag)
+    flag = input.is_blocked()
 end
 
 local function get_last(t, n)
@@ -65,7 +65,7 @@ function m.key_up(ctx, vkey)
     text = table.concat(lines, '\n')
     if vkey == 0x30 then
         flag = not flag
-        ctx.set_input_blocked(flag)
+        input.set_blocked(flag)
     end
 end
 
