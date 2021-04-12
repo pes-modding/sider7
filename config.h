@@ -90,6 +90,7 @@ public:
     BYTE *_hp_at_context_reset;
     BYTE *_hp_at_trophy_table;
     BYTE *_hp_at_ball_name;
+    BYTE *_hp_at_game_lite;
     BYTE *_hp_at_stadium_name;
     BYTE *_hp_at_def_stadium_name;
     BYTE *_hp_at_set_stadium_choice;
@@ -181,6 +182,7 @@ public:
                  _hp_at_sider(NULL),
                  _hp_at_trophy_table(NULL),
                  _hp_at_ball_name(NULL),
+                 _hp_at_game_lite(NULL),
                  _hp_at_stadium_name(NULL),
                  _hp_at_def_stadium_name(NULL),
                  _hp_at_dxgi(NULL),

@@ -375,6 +375,20 @@ static BYTE pattern_ball_name_head[3] = "\x50\x50";
 static BYTE pattern_ball_name_tail[4] = "\x58\x58\x90";
 
 /*
+00000001421E05EE  00 00 00 00 00 00 00 00 00 00 65 00 46 00 6F 00  ..........e.F.o.
+00000001421E05FE  6F 00 74 00 62 00 61 00 6C 00 6C 00 20 00 50 00  o.t.b.a.l.l. .P.
+00000001421E060E  45 00 53 00 20 00 32 00 30 00 32 00 31 00 20 00  E.S. .2.0.2.1. .
+00000001421E061E  4C 00 49 00 54 00 45 00 00 00 65 00 46 00 6F 00  L.I.T.E...e.F.o.
+*/
+
+static BYTE pattern_game_lite[49] =
+    "\x65\x00\x46\x00\x6f\x00"
+    "\x6f\x00\x74\x00\x62\x00\x61\x00\x6c\x00\x6c\x00\x20\x00\x50\x00"
+    "\x45\x00\x53\x00\x20\x00\x32\x00\x30\x00\x32\x00\x31\x00\x20\x00"
+    "\x4c\x00\x49\x00\x54\x00\x45\x00\x00\x00";
+static int offs_game_lite = 0;
+
+/*
 00000001415BD4A0 | 48 33 C4                             | xor rax,rsp                            |
 00000001415BD4A3 | 48 89 84 24 E0 01 00 00              | mov qword ptr ss:[rsp+1E0],rax         |
 00000001415BD4AB | 48 8B F9                             | mov rdi,rcx                            |

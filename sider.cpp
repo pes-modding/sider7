@@ -6602,7 +6602,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 38
+#define NUM_PATTERNS 39
     BYTE *frag[NUM_PATTERNS+1];
     frag[1] = lcpk_pattern_at_read_file;
     frag[2] = lcpk_pattern_at_get_size;
@@ -6642,6 +6642,7 @@ DWORD install_func(LPVOID thread_param) {
     frag[36] = pattern_copy_clock;
     frag[37] = pattern_clear_sc;
     frag[38] = pattern_xinput;
+    frag[39] = pattern_game_lite;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[1] = 24;
@@ -6649,6 +6650,7 @@ DWORD install_func(LPVOID thread_param) {
     _variations[4] = 30;
     _variations[5] = 31;
     _variations[7] = 20;
+    _variations[15] = 39;
     _variations[17] = 34;
     _variations[20] = 7;
     _variations[24] = 1;
@@ -6659,6 +6661,7 @@ DWORD install_func(LPVOID thread_param) {
     _variations[33] = 1;
     _variations[34] = 17;
     _variations[35] = 29;
+    _variations[39] = 15;
 
     size_t frag_len[NUM_PATTERNS+1];
     frag_len[1] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_read_file)-1 : 0;
@@ -6699,6 +6702,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[36] = _config->_lua_enabled ? sizeof(pattern_copy_clock)-1 : 0;
     frag_len[37] = _config->_lua_enabled ? sizeof(pattern_clear_sc)-1 : 0;
     frag_len[38] = _config->_lua_enabled ? sizeof(pattern_xinput)-1 : 0;
+    frag_len[39] = _config->_lua_enabled ? sizeof(pattern_game_lite)-1 : 0;
 
     int offs[NUM_PATTERNS+1];
     offs[1] = lcpk_offs_at_read_file;
@@ -6739,6 +6743,7 @@ DWORD install_func(LPVOID thread_param) {
     offs[36] = offs_copy_clock;
     offs[37] = offs_clear_sc;
     offs[38] = offs_xinput;
+    offs[39] = offs_game_lite;
 
     BYTE **addrs[NUM_PATTERNS+1];
     addrs[1] = &_config->_hp_at_read_file;
@@ -6779,6 +6784,7 @@ DWORD install_func(LPVOID thread_param) {
     addrs[36] = &_config->_hp_at_copy_clock;
     addrs[37] = &_config->_hp_at_clear_sc;
     addrs[38] = &_config->_hp_at_xinput;
+    addrs[39] = &_config->_hp_at_game_lite;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -6880,7 +6886,7 @@ bool all_found(config_t *cfg) {
             cfg->_hp_at_set_settings > 0 &&
             cfg->_hp_at_trophy_check > 0 &&
             cfg->_hp_at_trophy_table > 0 &&
-            //cfg->_hp_at_ball_name > 0 &&  // Lite does not have it
+            (cfg->_hp_at_ball_name > 0 || cfg->_hp_at_game_lite > 0) &&
             cfg->_hp_at_stadium_name > 0 &&
             cfg->_hp_at_def_stadium_name > 0 &&
             cfg->_hp_at_context_reset > 0 &&
@@ -7037,9 +7043,9 @@ bool hook_if_all_found() {
                     (BYTE*)pattern_ball_name_head, sizeof(pattern_ball_name_head)-1,
                     (BYTE*)pattern_ball_name_tail, sizeof(pattern_ball_name_tail)-1);
             }
-            else {
+            else if (_config->_hp_at_game_lite) {
                 // pes 2021 lite: does not work
-                logu_("WARN: get_ball_name not found. This is probably PES Lite\n");
+                logu_("WARN: This looks to be PES Lite. Some sider features will not work\n");
             }
 
             hook_call_with_head_and_tail(_config->_hp_at_stadium_name, (BYTE*)sider_stadium_name_hk,
