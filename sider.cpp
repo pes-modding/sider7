@@ -309,7 +309,6 @@ void set_context_field_int(const char *name, int value);
 void set_context_field_nil(const char *name);
 void clear_context();
 void lua_reload_modified_modules();
-static void push_env_table(lua_State *L, const wchar_t *script_name);
 
 const char *_context_fields[] = {
     "match_id", "match_info", "match_leg",// "match_time",
@@ -393,6 +392,10 @@ lookup_cache_t *_lookup_cache(NULL);
 //typedef LONGLONG (*pfn_alloc_mem_t)(BUFFER_INFO *bi, LONGLONG size);
 //pfn_alloc_mem_t _org_alloc_mem;
 
+BYTE* get_target_location(BYTE *call_location);
+BYTE* get_target_location2(BYTE *rel_offs_location);
+void HookXInputGetState();
+
 LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK sider_foreground_idle_proc(int code, WPARAM wParam, LPARAM lParam);
 
@@ -406,10 +409,33 @@ PFN_IDXGISwapChain_Present _org_Present(NULL);
 HRESULT sider_CreateDXGIFactory1(REFIID riid, void **ppFactory);
 HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_SWAP_CHAIN_DESC *pDesc, IDXGISwapChain **ppSwapChain);
 HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags);
+
+typedef DWORD (*PFN_XInputGetState)(DWORD dwUserIndex, XINPUT_STATE *pState);
+typedef HRESULT (*PFN_IDirectInput8_CreateDevice)(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVICE * lplpDirectInputDevice, LPUNKNOWN pUnkOuter);
+typedef HRESULT (*PFN_IDirectInputDevice8_GetDeviceState)(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData);
+//typedef HRESULT (*PFN_IDirectInputDevice8_GetDeviceData)(IDirectInputDevice8 *self, DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod,
+//         LPDWORD pdwInOut, DWORD dwFlags);
+//typedef HRESULT (*PFN_IDirectInputDevice8_Poll)(IDirectInputDevice8 *self);
+PFN_XInputGetState _org_XInputGetState;
+PFN_IDirectInput8_CreateDevice _org_CreateDevice;
+PFN_IDirectInputDevice8_GetDeviceState _org_GetDeviceStateKeyboard;
+PFN_IDirectInputDevice8_GetDeviceState _org_GetDeviceStateGamepad;
+//PFN_IDirectInputDevice8_GetDeviceData _org_GetDeviceData;
+//PFN_IDirectInputDevice8_Poll _org_Poll;
+DWORD sider_XInputGetState(DWORD dwUserIndex, XINPUT_STATE *pState);
+HRESULT sider_CreateDevice(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVICE * lplpDirectInputDevice, LPUNKNOWN pUnkOuter);
+HRESULT sider_GetDeviceStateKeyboard(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData);
+HRESULT sider_GetDeviceStateGamepad(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData);
+//HRESULT sider_GetDeviceData(IDirectInputDevice8 *self, DWORD cbObjectData, LPDIDEVICEOBJECTDATA rgdod, LPDWORD pdwInOut, DWORD dwFlags);
+//HRESULT sider_Poll(IDirectInputDevice8 *self);
+map<BYTE**, BYTE*> _vtables;
+
 BOOL sider_device_enum_callback(LPCDIDEVICEINSTANCE lppdi, LPVOID pvRef);
 BOOL sider_device_enum_callback(LPCDIDEVICEINSTANCE lppdi, LPVOID pvRef);
 BOOL sider_object_enum_callback(LPCDIDEVICEOBJECTINSTANCE lpddoi, LPVOID pvRef);
 void init_direct_input();
+void enumerate_controllers();
+BYTE **_xinput_get_state_holder(NULL);
 
 ID3D11Device *_device(NULL);
 ID3D11DeviceContext *_device_context(NULL);
@@ -453,10 +479,11 @@ struct dx11_t {
 };
 dx11_t DX11;
 
-IDirectInput8 *g_IDirectInput8;
-IDirectInputDevice8 *g_IDirectInputDevice8;
+IDirectInput8 *g_IDirectInput8(NULL);
+IDirectInputDevice8 *g_IDirectInputDevice8(NULL);
 GUID g_controller_guid_instance;
 bool _has_controller(false);
+bool _enumerated_controllers(false);
 bool _controller_prepped(false);
 bool _controller_poll_initialized(false);
 bool _controller_poll(false);
@@ -730,6 +757,8 @@ static HHOOK handle1 = 0;
 static HHOOK kb_handle = 0;
 
 bool _overlay_on(false);
+bool _block_input(false);
+bool _hard_block(false);
 bool _reload_1_down(false);
 bool _reload_modified(false);
 bool _is_game(false);
@@ -1579,10 +1608,14 @@ struct module_t {
     int evt_key_down;
     int evt_key_up;
     int evt_gamepad_input;
+    int evt_show;
+    int evt_hide;
 };
 vector<module_t*> _modules;
 module_t* _curr_m;
 vector<module_t*>::iterator _curr_overlay_m;
+
+static void push_env_table(lua_State *L, module_t* m);
 
 bool init_paths() {
     wchar_t *p;
@@ -1845,8 +1878,10 @@ void set_controller_poll_delay() {
 BOOL sider_device_enum_callback(LPCDIDEVICEINSTANCE lppdi, LPVOID pvRef)
 {
     log_(L"controller: type: %x name: %s\n", lppdi->dwDevType, lppdi->tszInstanceName);
-    g_controller_guid_instance = lppdi->guidInstance;
-    _has_controller = true;
+    if (!_has_controller) {
+        g_controller_guid_instance = lppdi->guidInstance;
+        _has_controller = true;
+    }
     return DIENUM_CONTINUE;
 }
 
@@ -2489,6 +2524,42 @@ char *module_stadium_name(module_t *m, char *name, BYTE stadium_id, SCHEDULE_ENT
         LeaveCriticalSection(&_cs);
     }
     return res;
+}
+
+void module_show(module_t *m)
+{
+    if (m->evt_show != 0) {
+        EnterCriticalSection(&_cs);
+        lua_pushvalue(m->L, m->evt_show);
+        lua_xmove(m->L, L, 1);
+        // push params
+        lua_pushvalue(L, 1); // ctx
+        if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+            const char *err = luaL_checkstring(L, -1);
+            logu_("[%d] lua ERROR from module_show: %s\n", GetCurrentThreadId(), err);
+            lua_pop(L, 1);
+        }
+        LeaveCriticalSection(&_cs);
+    }
+}
+
+void module_hide(module_t *m)
+{
+    EnterCriticalSection(&_cs);
+    if (m->evt_hide != 0) {
+        lua_pushvalue(m->L, m->evt_hide);
+        lua_xmove(m->L, L, 1);
+        // push params
+        lua_pushvalue(L, 1); // ctx
+        if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+            const char *err = luaL_checkstring(L, -1);
+            logu_("[%d] lua ERROR from module_hide: %s\n", GetCurrentThreadId(), err);
+            lua_pop(L, 1);
+        }
+    }
+    _block_input = false;
+    _hard_block = false;
+    LeaveCriticalSection(&_cs);
 }
 
 void module_overlay_on(module_t *m, char **text, char **image_path, struct layout_t *opts)
@@ -3356,9 +3427,22 @@ void draw_ui(float top, float bottom, float right_margin)
     g_pRenderTargetView->Release();
 }
 
+void sider_dispatch_show_hide_events(bool on)
+{
+    if (_curr_overlay_m != _modules.end()) {
+        if (on) {
+            module_show(*_curr_overlay_m);
+        }
+        else {
+            module_hide(*_curr_overlay_m);
+        }
+    }
+}
+
 void sider_switch_overlay_to_prev_module()
 {
     if (_curr_overlay_m != _modules.end()) {
+        module_hide(*_curr_overlay_m);
         // previous module
         vector<module_t*>::iterator j = _curr_overlay_m;
         do {
@@ -3370,6 +3454,7 @@ void sider_switch_overlay_to_prev_module()
             if (m->evt_overlay_on) {
                 log_(L"now active module on overlay: %s\n", m->filename->c_str());
                 _curr_overlay_m = j;
+                module_show(*_curr_overlay_m);
                 break;
             }
         }
@@ -3381,6 +3466,7 @@ void sider_switch_overlay_to_prev_module()
 void sider_switch_overlay_to_next_module()
 {
     if (_curr_overlay_m != _modules.end()) {
+        module_hide(*_curr_overlay_m);
         // next module
         vector<module_t*>::iterator j = _curr_overlay_m;
         do {
@@ -3392,6 +3478,7 @@ void sider_switch_overlay_to_next_module()
             if (m->evt_overlay_on) {
                 log_(L"now active module on overlay: %s\n", m->filename->c_str());
                 _curr_overlay_m = j;
+                module_show(*_curr_overlay_m);
                 break;
             }
         }
@@ -3521,6 +3608,7 @@ DWORD direct_input_poll(void *param) {
                         if (b1==1 && b2==1 && (was_b1!=b1 || was_b2!=b2)) {
                             _overlay_on = !_overlay_on;
                             play_overlay_toggle_sound();
+                            sider_dispatch_show_hide_events(_overlay_on);
                             handled = true;
                             _toggle_sequence_on = true;
                             DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
@@ -3672,6 +3760,7 @@ DWORD direct_input_poll(void *param) {
                     if (b1!=0 && b2!=0 && (was_b1!=b1 || was_b2!=b2)) {
                         _overlay_on = !_overlay_on;
                         play_overlay_toggle_sound();
+                        sider_dispatch_show_hide_events(_overlay_on);
                         handled = true;
                         _toggle_sequence_on = true;
                         DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
@@ -3798,19 +3887,195 @@ DWORD direct_input_poll(void *param) {
     return 0;
 }
 
+void HookVtblMethod(void *self, int idx, map<BYTE**,BYTE*>* vtables, void *new_func, char *name)
+{
+    BYTE** vtbl = *(BYTE***)self;
+    BYTE *f = vtbl[idx];
+
+    //DBG(64) logu_("current %s = %p\n", name, f);
+    if ((BYTE*)f == (BYTE*)new_func) {
+        //DBG(64) logu_("%s already hooked.\n", name);
+    }
+    else {
+        lock_t lock(&_cs);
+        logu_("Hooking %s\n", name);
+        vtables->insert(pair<BYTE**,BYTE*>(vtbl, f));
+        logu_("org %s = %p\n", name, f);
+
+        DWORD protection = 0;
+        DWORD newProtection = PAGE_EXECUTE_READWRITE;
+        if (VirtualProtect(vtbl+idx, 8, newProtection, &protection)) {
+            vtbl[idx] = (BYTE*)new_func;
+            f = vtbl[idx];
+            logu_("now %s = %p\n", name, f);
+        }
+        else {
+            logu_("ERROR: VirtualProtect failed for: %p\n", vtbl+idx);
+        }
+    }
+}
+
+void HookVtblMethod2(void *self, int idx, void **old_func, void *new_func, char *name)
+{
+    BYTE** vtbl = *(BYTE***)self;
+    BYTE *f = vtbl[idx];
+
+    //DBG(64) logu_("current %s = %p\n", name, f);
+    if ((BYTE*)f == (BYTE*)new_func) {
+        //DBG(64) logu_("%s already hooked.\n", name);
+    }
+    else {
+        lock_t lock(&_cs);
+        logu_("Hooking %s\n", name);
+        *old_func = f;
+        logu_("org %s = %p\n", name, f);
+
+        DWORD protection = 0;
+        DWORD newProtection = PAGE_EXECUTE_READWRITE;
+        if (VirtualProtect(vtbl+idx, 8, newProtection, &protection)) {
+            vtbl[idx] = (BYTE*)new_func;
+            f = vtbl[idx];
+            logu_("now %s = %p\n", name, f);
+        }
+        else {
+            logu_("ERROR: VirtualProtect failed for: %p\n", vtbl+idx);
+        }
+    }
+}
+
+HRESULT sider_CreateDevice(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVICE * lplpDirectInputDevice, LPUNKNOWN pUnkOuter)
+{
+    logu_("sider_CreateDevice(self:%p): called\n", self);
+    /**
+    map<BYTE**,BYTE*>::iterator it = _vtables.find(*(BYTE***)self);
+    if (it == _vtables.end()) {
+        // bad
+        logu_("unable to find vtable entry for self: %p\n");
+        return S_OK;
+    }
+    BYTE *f = it->second;
+    PFN_IDirectInput8_CreateDevice org_f = (PFN_IDirectInput8_CreateDevice)f;
+    HRESULT res = org_f(self, rguid, lplpDirectInputDevice, pUnkOuter);
+    **/
+    HRESULT res = _org_CreateDevice(self, rguid, lplpDirectInputDevice, pUnkOuter);
+
+    logu_("IDirectInput8::CreateDevice(%p, %p, %p, %p) returned: %p\n", self, rguid, lplpDirectInputDevice, pUnkOuter, *lplpDirectInputDevice);
+    wchar_t guid_str[256];
+    if (StringFromGUID2(rguid, guid_str, 256)) {
+        log_(L"rguid: %s\n", guid_str);
+    }
+    if (rguid == GUID_SysKeyboard) {
+        logu_("this is a keyboard device: %p\n", *lplpDirectInputDevice);
+        //HookVtblMethod(*lplpDirectInputDevice, 9, &_vtables, sider_GetDeviceState, "IDirectInputDevice8::GetDeviceState");
+        HookVtblMethod2(*lplpDirectInputDevice, 9, (void**)&_org_GetDeviceStateKeyboard, sider_GetDeviceStateKeyboard, "IDirectInputDevice8::GetDeviceState");
+    }
+    else if (rguid == GUID_SysMouse) {
+        logu_("this is a mouse device: %p\n", *lplpDirectInputDevice);
+        //HookVtblMethod(*lplpDirectInputDevice, 9, &_vtables, sider_GetDeviceState, "IDirectInputDevice8::GetDeviceState");
+    }
+    else {
+        logu_("this is some other device: %p\n", *lplpDirectInputDevice);
+        //HookVtblMethod(*lplpDirectInputDevice, 9, &_vtables, sider_GetDeviceState, "IDirectInputDevice8::GetDeviceState");
+        HookVtblMethod2(*lplpDirectInputDevice, 9, (void**)&_org_GetDeviceStateGamepad, sider_GetDeviceStateGamepad, "IDirectInputDevice8::GetDeviceState");
+    }
+    return res;
+}
+
+HRESULT sider_GetDeviceStateGamepad(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData)
+{
+    DBG(16384) logu_("sider_GetDeviceStateGamepad(self:%p): called\n", self);
+    /**
+    map<BYTE**,BYTE*>::iterator it = _vtables.find(*(BYTE***)self);
+    if (it == _vtables.end()) {
+        // bad
+        logu_("unable to find vtable entry for self: %p\n");
+        return S_OK;
+    }
+    BYTE *f = it->second;
+    PFN_IDirectInputDevice8_GetDeviceState org_f = (PFN_IDirectInputDevice8_GetDeviceState)f;
+    HRESULT res = org_f(self, cbData, lpvData);
+    **/
+    HRESULT res = _org_GetDeviceStateGamepad(self, cbData, lpvData);
+    if (_overlay_on && (_config->_global_block_input || _block_input)) {
+        if (self != g_IDirectInputDevice8) {
+            // block input to game
+            return DIERR_INPUTLOST;
+        }
+    }
+    DBG(16384) logu_("sider_GetDeviceStateGamepad(self:%p): res = %x\n", self, res);
+    return res;
+}
+
+HRESULT sider_GetDeviceStateKeyboard(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData)
+{
+    DBG(16384) logu_("sider_GetDeviceStateKeyboard(self:%p): called\n", self);
+    /**
+    map<BYTE**,BYTE*>::iterator it = _vtables.find(*(BYTE***)self);
+    if (it == _vtables.end()) {
+        // bad
+        logu_("unable to find vtable entry for self: %p\n");
+        return S_OK;
+    }
+    BYTE *f = it->second;
+    PFN_IDirectInputDevice8_GetDeviceState org_f = (PFN_IDirectInputDevice8_GetDeviceState)f;
+    HRESULT res = org_f(self, cbData, lpvData);
+    **/
+    HRESULT res = _org_GetDeviceStateKeyboard(self, cbData, lpvData);
+    if (_overlay_on && (_config->_global_block_input || _block_input)) {
+        // block input to game
+        return DIERR_INPUTLOST;
+    }
+    DBG(16384) logu_("sider_GetDeviceStateKeyboard(self:%p): res = %x\n", self, res);
+    return res;
+}
+
+DWORD sider_XInputGetState(DWORD dwUserIndex, XINPUT_STATE *pState)
+{
+    DBG(16384) logu_("sider_XInputGetState(dwUserIndex:%x, pState:%p): called\n", dwUserIndex, pState);
+    if (_overlay_on && (_config->_global_block_input || _block_input)) {
+        // block input to game
+        return ERROR_SUCCESS;
+    }
+    DWORD res = _org_XInputGetState(dwUserIndex, pState);
+    return res;
+}
+
+void HookXInputGetState()
+{
+    log_(L"XInputGetState: %p\n", XInputGetState);
+    BYTE *jmp_xinput_get_state = get_target_location2(_config->_hp_at_xinput);
+    if (jmp_xinput_get_state) {
+        _xinput_get_state_holder = (BYTE**)get_target_location(jmp_xinput_get_state);
+        log_(L"xinput_get_state_holder: %p\n", _xinput_get_state_holder);
+        if (_xinput_get_state_holder) {
+            _org_XInputGetState = (PFN_XInputGetState)(*_xinput_get_state_holder);
+            log_(L"_org_XInputGetState: %p\n", _org_XInputGetState);
+
+            *_xinput_get_state_holder = (BYTE*)sider_XInputGetState;
+            log_(L"now XInputGetState: %p\n", *_xinput_get_state_holder);
+        }
+    }
+}
+
 HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags)
 {
     //logu_("Present called for swapChain: %p\n", swapChain);
     //logu_("Present:: gettop: %d\n", lua_gettop(L));
 
     if (kb_handle == NULL && _config->_overlay_enabled) {
-        kb_handle = SetWindowsHookEx(WH_KEYBOARD, sider_keyboard_proc, myHDLL, GetCurrentThreadId());
+        kb_handle = SetWindowsHookEx(WH_KEYBOARD, sider_keyboard_proc, NULL, GetCurrentThreadId());
+        logu_("kb_handle = %p\n", kb_handle);
+    }
+
+    if (!_enumerated_controllers) {
+        enumerate_controllers();
     }
 
     if (_reload_modified) {
         clear_overlay_texture();
         lua_reload_modified_modules();
         _reload_modified = false;
+        _reload_1_down = false;
     }
 
     // process priority
@@ -5405,6 +5670,40 @@ static int sider_context_refresh_kit(lua_State *L)
     return 0;
 }
 
+static int sider_input_is_blocked(lua_State *L)
+{
+    lua_pushboolean(L, _block_input);
+    lua_pushboolean(L, _hard_block);
+    return 2;
+}
+
+static int sider_input_set_blocked(lua_State *L)
+{
+    int val = 0;
+    if (lua_gettop(L) > 0) {
+        val = lua_toboolean(L, 1);
+        lua_pop(L, 1);
+    }
+    int hard = 0;
+    if (lua_gettop(L) > 0) {
+        hard = lua_toboolean(L, 1);
+        lua_pop(L, 1);
+    }
+    module_t *m = (module_t*)lua_topointer(L, lua_upvalueindex(1));
+    if (!m) {
+        lua_pushstring(L, "fatal problem: current module is unknown");
+        return lua_error(L);
+    }
+    module_t *om = (_curr_overlay_m == _modules.end()) ? NULL : (*_curr_overlay_m);
+    if (!om || m != om) {
+        lua_pushfstring(L, "only module that currently controls overlay can block input");
+        return lua_error(L);
+    }
+    _block_input = (val != 0);
+    _hard_block = (hard != 0) && _block_input;
+    return 0;
+}
+
 static int sider_context_register(lua_State *L)
 {
     const char *event_key = luaL_checkstring(L, 1);
@@ -5543,6 +5842,18 @@ static int sider_context_register(lua_State *L)
         _curr_m->evt_get_ball_name = lua_gettop(_curr_m->L);
         logu_("Registered for \"%s\" event\n", event_key);
     }
+    else if (strcmp(event_key, "show")==0) {
+        lua_pushvalue(L, -1);
+        lua_xmove(L, _curr_m->L, 1);
+        _curr_m->evt_show = lua_gettop(_curr_m->L);
+        logu_("Registered for \"%s\" event\n", event_key);
+    }
+    else if (strcmp(event_key, "hide")==0) {
+        lua_pushvalue(L, -1);
+        lua_xmove(L, _curr_m->L, 1);
+        _curr_m->evt_hide = lua_gettop(_curr_m->L);
+        logu_("Registered for \"%s\" event\n", event_key);
+    }
     else if (strcmp(event_key, "overlay_on")==0) {
         lua_pushvalue(L, -1);
         lua_xmove(L, _curr_m->L, 1);
@@ -5620,6 +5931,7 @@ static void push_context_table(lua_State *L)
     lua_pushcfunction(L, sider_context_register);
     lua_setfield(L, -2, "register");
 
+    // ctx.kits
     lua_newtable(L);
     lua_pushcfunction(L, sider_context_get_current_team_id);
     lua_setfield(L, -2, "get_current_team");
@@ -5644,7 +5956,7 @@ static void push_context_table(lua_State *L)
     lua_setfield(L, -2, "kits");
 }
 
-static void push_env_table(lua_State *L, const wchar_t *script_name)
+static void push_env_table(lua_State *L, module_t *m)
 {
     char *sandbox[] = {
         "assert", "table", "pairs", "ipairs",
@@ -5695,10 +6007,20 @@ static void push_env_table(lua_State *L, const wchar_t *script_name)
     lua_pushcclosure(L, sider_log, 1);
     lua_settable(L, -3);
     lua_pushstring(L, "_FILE");
-    char *sname = (char*)Utf8::unicodeToUtf8(script_name);
+    char *sname = (char*)Utf8::unicodeToUtf8(m->filename->c_str());
     lua_pushstring(L, sname);
     Utf8::free(sname);
     lua_settable(L, -3);
+
+    // input table
+    lua_newtable(L);
+    lua_pushlightuserdata(L, m);
+    lua_pushcclosure(L, sider_input_is_blocked, 1);
+    lua_setfield(L, -2, "is_blocked");
+    lua_pushlightuserdata(L, m);
+    lua_pushcclosure(L, sider_input_set_blocked, 1);
+    lua_setfield(L, -2, "set_blocked");
+    lua_setfield(L, -2, "input");
 
     // memory lib
     lua_pushvalue(L, _memory_lib_index);
@@ -5888,8 +6210,15 @@ void init_lua_support()
                 continue;
             }
 
+            module_t *m = new module_t();
+            memset(m, 0, sizeof(module_t));
+            m->filename = new wstring(it->c_str());
+            m->last_modified = last_mod_time;
+            //m->cache = new lookup_cache_t(_config->_cache_size);
+            m->L = luaL_newstate();
+
             // set environment
-            push_env_table(L, it->c_str());
+            push_env_table(L, m);
             lua_setfenv(L, -2);
 
             // run the module
@@ -5921,12 +6250,6 @@ void init_lua_support()
                 continue;
             }
 
-            module_t *m = new module_t();
-            memset(m, 0, sizeof(module_t));
-            m->filename = new wstring(it->c_str());
-            m->last_modified = last_mod_time;
-            //m->cache = new lookup_cache_t(_config->_cache_size);
-            m->L = luaL_newstate();
             _curr_m = m;
 
             lua_pushvalue(L, 1); // ctx
@@ -6039,8 +6362,16 @@ void lua_reload_modified_modules()
             continue;
         }
 
+        module_t *newm = new module_t();
+        memset(newm, 0, sizeof(module_t));
+        newm->filename = new wstring(m->filename->c_str());
+        newm->last_modified = last_mod_time;
+        //newm->cache = new lookup_cache_t(_config->_cache_size);
+        newm->L = luaL_newstate();
+
         // set environment
-        push_env_table(L, m->filename->c_str());
+        // use the original pointer, because we will copy the module_t structure later
+        push_env_table(L, m);
         lua_setfenv(L, -2);
 
         // run the module
@@ -6072,12 +6403,6 @@ void lua_reload_modified_modules()
             continue;
         }
 
-        module_t *newm = new module_t();
-        memset(newm, 0, sizeof(module_t));
-        newm->filename = new wstring(m->filename->c_str());
-        newm->last_modified = last_mod_time;
-        //newm->cache = new lookup_cache_t(_config->_cache_size);
-        newm->L = luaL_newstate();
         _curr_m = newm;
 
         lua_pushvalue(L, 1); // ctx
@@ -6220,6 +6545,7 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"overlay.vkey.prev-module = 0x%02x\n", _config->_overlay_vkey_prev_module);
     log_(L"overlay.toggle.sound = %s\n", _config->_overlay_toggle_sound.c_str());
     log_(L"overlay.toggle.sound-volume = %0.2f\n", _config->_overlay_toggle_sound_volume);
+    log_(L"overlay.block-input-when-on = %d\n", _config->_global_block_input);
     log_(L"match-stats.enabled = %d\n", _config->_match_stats_enabled);
     log_(L"vkey.reload-1 = 0x%02x\n", _config->_vkey_reload_1);
     log_(L"vkey.reload-2 = 0x%02x\n", _config->_vkey_reload_2);
@@ -6276,7 +6602,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 37
+#define NUM_PATTERNS 38
     BYTE *frag[NUM_PATTERNS+1];
     frag[1] = lcpk_pattern_at_read_file;
     frag[2] = lcpk_pattern_at_get_size;
@@ -6315,6 +6641,7 @@ DWORD install_func(LPVOID thread_param) {
     frag[35] = pattern2_call_to_move;
     frag[36] = pattern_copy_clock;
     frag[37] = pattern_clear_sc;
+    frag[38] = pattern_xinput;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[1] = 24;
@@ -6371,6 +6698,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[35] = _config->_lua_enabled ? sizeof(pattern2_call_to_move)-1 : 0;
     frag_len[36] = _config->_lua_enabled ? sizeof(pattern_copy_clock)-1 : 0;
     frag_len[37] = _config->_lua_enabled ? sizeof(pattern_clear_sc)-1 : 0;
+    frag_len[38] = _config->_lua_enabled ? sizeof(pattern_xinput)-1 : 0;
 
     int offs[NUM_PATTERNS+1];
     offs[1] = lcpk_offs_at_read_file;
@@ -6410,6 +6738,7 @@ DWORD install_func(LPVOID thread_param) {
     offs[35] = offs2_call_to_move;
     offs[36] = offs_copy_clock;
     offs[37] = offs_clear_sc;
+    offs[38] = offs_xinput;
 
     BYTE **addrs[NUM_PATTERNS+1];
     addrs[1] = &_config->_hp_at_read_file;
@@ -6449,6 +6778,7 @@ DWORD install_func(LPVOID thread_param) {
     addrs[35] = &_config->_hp_at_call_to_move;
     addrs[36] = &_config->_hp_at_copy_clock;
     addrs[37] = &_config->_hp_at_clear_sc;
+    addrs[38] = &_config->_hp_at_xinput;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -6565,6 +6895,7 @@ bool all_found(config_t *cfg) {
             cfg->_hp_at_uniparam_loaded > 0 &&
             cfg->_hp_at_copy_clock > 0 &&
             cfg->_hp_at_clear_sc > 0 &&
+            cfg->_hp_at_xinput > 0 &&
             true
         );
     }
@@ -6748,6 +7079,9 @@ bool hook_if_all_found() {
                 (BYTE*)pattern_def_stadium_name_head, sizeof(pattern_def_stadium_name_head)-1,
                 (BYTE*)pattern_def_stadium_name_tail, sizeof(pattern_def_stadium_name_tail)-1,
                 old_moved_call, new_moved_call);
+
+            HookXInputGetState();
+
             log_(L"-------------------------------\n");
         }
 
@@ -6781,62 +7115,75 @@ void init_direct_input()
 {
     // initialize DirectInput
     g_IDirectInput8 = NULL;
-    if (!_gamepad_config->_dinput_enabled) {
-        return;
-    }
     if (SUCCEEDED(DirectInput8Create(
         myHDLL, DIRECTINPUT_VERSION, IID_IDirectInput8,
         (void**)&g_IDirectInput8, NULL))) {
         logu_("g_IDirectInput8 = %p\n", g_IDirectInput8);
 
-        // enumerate devices
-        _has_controller = false;
-        logu_("Enumerating game controllers\n");
-        if (SUCCEEDED(g_IDirectInput8->EnumDevices(
-            DI8DEVCLASS_GAMECTRL, sider_device_enum_callback, NULL, DIEDFL_ALLDEVICES))) {
-            logu_("Done enumerating game controllers\n");
-
-            if (_has_controller) {
-                g_IDirectInputDevice8 = NULL;
-                if (SUCCEEDED(g_IDirectInput8->CreateDevice(
-                    g_controller_guid_instance, &g_IDirectInputDevice8, NULL))) {
-                    logu_("DirectInputDevice created: %p\n", g_IDirectInputDevice8);
-
-                    // enumerate buttons and prepare data format
-                    if (SUCCEEDED(g_IDirectInputDevice8->EnumObjects(
-                        sider_object_enum_callback, NULL, DIDFT_PSHBUTTON | DIDFT_AXIS | DIDFT_POV))) {
-                        logu_("number of inputs: %d\n", _di_objects.size());
-
-                        memset(&_data_format, 0, sizeof(DIDATAFORMAT));
-                        _data_format.dwSize = sizeof(DIDATAFORMAT);
-                        _data_format.dwObjSize = sizeof(DIOBJECTDATAFORMAT);
-                        _data_format.dwFlags = DIDF_ABSAXIS;
-                        _data_format.dwDataSize = sizeof(_controller_buttons);
-                        _data_format.dwNumObjs = _di_objects.size();
-                        size_t rgodf_size = sizeof(DIOBJECTDATAFORMAT) * _di_objects.size();
-                        _data_format.rgodf = (LPDIOBJECTDATAFORMAT)malloc(rgodf_size);
-                        int i = 0;
-                        vector<DIDEVICEOBJECTINSTANCE>::iterator it;
-                        for (it = _di_objects.begin(); it != _di_objects.end(); it++, i++) {
-                            _data_format.rgodf[i].pguid = &it->guidType;
-                            _data_format.rgodf[i].dwOfs = it->dwOfs;
-                            _data_format.rgodf[i].dwType = it->dwType;
-                            _data_format.rgodf[i].dwFlags = 0;
-                        }
-
-                        _controller_prepped = false;
-                        memset(_controller_buttons, 0, sizeof(_controller_buttons));
-                        memset(_prev_controller_buttons, 0, sizeof(_prev_controller_buttons));
-                    }
-                }
-            }
-        }
-        else {
-            logu_("PROBLEM enumerating game controllers\n");
-        }
+        // hook CreateDevice
+        //HookVtblMethod(g_IDirectInput8, 3, &_vtables, sider_CreateDevice, "IDirectInput8::CreateDevice");
+        HookVtblMethod2(g_IDirectInput8, 3, (void**)&_org_CreateDevice, sider_CreateDevice, "IDirectInput8::CreateDevice");
     }
     else {
         logu_("PROBLEM creating DirectInput interface\n");
+    }
+
+    if (!_gamepad_config->_dinput_enabled) {
+        return;
+    }
+}
+
+void enumerate_controllers()
+{
+    _enumerated_controllers = true;
+    if (!_gamepad_config->_dinput_enabled) {
+        return;
+    }
+
+    // enumerate devices
+    _has_controller = false;
+    logu_("Enumerating game controllers\n");
+    if (SUCCEEDED(g_IDirectInput8->EnumDevices(
+        DI8DEVCLASS_GAMECTRL, sider_device_enum_callback, NULL, DIEDFL_ALLDEVICES))) {
+        logu_("Done enumerating game controllers\n");
+
+        if (_has_controller) {
+            g_IDirectInputDevice8 = NULL;
+            if (SUCCEEDED(g_IDirectInput8->CreateDevice(
+                g_controller_guid_instance, &g_IDirectInputDevice8, NULL))) {
+                logu_("DirectInputDevice created: %p\n", g_IDirectInputDevice8);
+
+                // enumerate buttons and prepare data format
+                if (SUCCEEDED(g_IDirectInputDevice8->EnumObjects(
+                    sider_object_enum_callback, NULL, DIDFT_PSHBUTTON | DIDFT_AXIS | DIDFT_POV))) {
+                    logu_("number of inputs: %d\n", _di_objects.size());
+
+                    memset(&_data_format, 0, sizeof(DIDATAFORMAT));
+                    _data_format.dwSize = sizeof(DIDATAFORMAT);
+                    _data_format.dwObjSize = sizeof(DIOBJECTDATAFORMAT);
+                    _data_format.dwFlags = DIDF_ABSAXIS;
+                    _data_format.dwDataSize = sizeof(_controller_buttons);
+                    _data_format.dwNumObjs = _di_objects.size();
+                    size_t rgodf_size = sizeof(DIOBJECTDATAFORMAT) * _di_objects.size();
+                    _data_format.rgodf = (LPDIOBJECTDATAFORMAT)malloc(rgodf_size);
+                    int i = 0;
+                    vector<DIDEVICEOBJECTINSTANCE>::iterator it;
+                    for (it = _di_objects.begin(); it != _di_objects.end(); it++, i++) {
+                        _data_format.rgodf[i].pguid = &it->guidType;
+                        _data_format.rgodf[i].dwOfs = it->dwOfs;
+                        _data_format.rgodf[i].dwType = it->dwType;
+                        _data_format.rgodf[i].dwFlags = 0;
+                    }
+
+                    _controller_prepped = false;
+                    memset(_controller_buttons, 0, sizeof(_controller_buttons));
+                    memset(_prev_controller_buttons, 0, sizeof(_prev_controller_buttons));
+                }
+            }
+        }
+    }
+    else {
+        logu_("PROBLEM enumerating game controllers\n");
     }
 }
 
@@ -7080,20 +7427,21 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
     }
 
     if (code == HC_ACTION) {
-        if (wParam == _config->_overlay_vkey_toggle && ((lParam & 0x80000000) != 0)) {
+        if (!(_block_input && _hard_block) && wParam == _config->_overlay_vkey_toggle && ((lParam & 0x80000000) != 0)) {
             _overlay_on = !_overlay_on;
             play_overlay_toggle_sound();
+            sider_dispatch_show_hide_events(_overlay_on);
             DBG(64) logu_("overlay: %s\n", (_overlay_on)?"ON":"OFF");
             if (_overlay_on) {
                 _overlay_image.to_clear = true;
             }
         }
-        else if (wParam == _config->_vkey_reload_2 && ((lParam & 0x80000000) != 0)) {
+        else if (!(_block_input && _hard_block) && wParam == _config->_vkey_reload_2 && ((lParam & 0x80000000) != 0)) {
             if (_reload_1_down) {
                 _reload_modified = true;
             }
         }
-        else if (wParam == _config->_vkey_reload_1 && ((lParam & 0x80000000) == 0)) {
+        else if (!(_block_input && _hard_block) && wParam == _config->_vkey_reload_1 && ((lParam & 0x80000000) == 0)) {
             _reload_1_down = ((lParam & 0x80000000) == 0);
         }
 
@@ -7104,10 +7452,10 @@ LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam)
                 if (_curr_overlay_m != _modules.end()) {
                     // module switching keys
                     // "[" - 0xdb, "]" - 0xdd, "~" - 0xc0, "1" - 0x31
-                    if (wParam == _config->_overlay_vkey_next_module) {
+                    if (!(_block_input && _hard_block) && wParam == _config->_overlay_vkey_next_module) {
                         sider_switch_overlay_to_next_module();
                     }
-                    else if (wParam == _config->_overlay_vkey_prev_module) {
+                    else if (!(_block_input && _hard_block) && wParam == _config->_overlay_vkey_prev_module) {
                         sider_switch_overlay_to_prev_module();
                     }
                     else {
