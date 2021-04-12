@@ -6880,7 +6880,7 @@ bool all_found(config_t *cfg) {
             cfg->_hp_at_set_settings > 0 &&
             cfg->_hp_at_trophy_check > 0 &&
             cfg->_hp_at_trophy_table > 0 &&
-            cfg->_hp_at_ball_name > 0 &&
+            //cfg->_hp_at_ball_name > 0 &&  // Lite does not have it
             cfg->_hp_at_stadium_name > 0 &&
             cfg->_hp_at_def_stadium_name > 0 &&
             cfg->_hp_at_context_reset > 0 &&
@@ -7032,9 +7032,16 @@ bool hook_if_all_found() {
             if (_config->_hook_context_reset)
                 hook_call(_config->_hp_at_context_reset, (BYTE*)sider_context_reset_hk, 6);
 
-            hook_call_with_head_and_tail(_config->_hp_at_ball_name, (BYTE*)sider_ball_name_hk,
-                (BYTE*)pattern_ball_name_head, sizeof(pattern_ball_name_head)-1,
-                (BYTE*)pattern_ball_name_tail, sizeof(pattern_ball_name_tail)-1);
+            if (_config->_hp_at_ball_name) {
+                hook_call_with_head_and_tail(_config->_hp_at_ball_name, (BYTE*)sider_ball_name_hk,
+                    (BYTE*)pattern_ball_name_head, sizeof(pattern_ball_name_head)-1,
+                    (BYTE*)pattern_ball_name_tail, sizeof(pattern_ball_name_tail)-1);
+            }
+            else {
+                // pes 2021 lite: does not work
+                logu_("WARN: get_ball_name not found. This is probably PES Lite\n");
+            }
+
             hook_call_with_head_and_tail(_config->_hp_at_stadium_name, (BYTE*)sider_stadium_name_hk,
                 (BYTE*)pattern_stadium_name_head, sizeof(pattern_stadium_name_head)-1,
                 (BYTE*)pattern_stadium_name_tail, sizeof(pattern_stadium_name_tail)-1);
