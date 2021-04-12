@@ -2,6 +2,12 @@ Sider 7 Release History
 =======================
 
 
+April 12, 2021
+v7.1.0
+- added "input-blocking" feature
+- small tweak to support PES 2021 Lite 1.05.00 exe
+
+
 October 6, 2020
 v7.0.2
 - another fix for "match.minutes": now works with 1.01.00 and 1.01.01 game exes

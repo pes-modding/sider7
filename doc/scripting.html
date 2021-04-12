@@ -39,7 +39,7 @@ table.inputs tr td.right,th.right { border-right: 1px solid #888; }
 
 <body>
 <h1>Sider 7 Lua Module Programmers Guide</h1>
-<h4>For sider.dll version: 7.0</h4>
+<h4>For sider.dll version: 7.1</h4>
 
 <p>
 <ol>
@@ -49,6 +49,7 @@ table.inputs tr td.right,th.right { border-right: 1px solid #888; }
 <li><a href="#events">Supported events</a></li>
 <li><a href="#logging">Logging</a></li>
 <li><a href="#env">Module environment</a></li>
+<li><a href="#input">Input library</a></li>
 <li><a href="#memory">Memory library</a></li>
 <li><a href="#zlib">Zlib library</a></li>
 <li><a href="#audio">Audio library</a></li>
@@ -722,6 +723,23 @@ possible to have trophy celebrations for tournaments that do not have
 them in the original game content. (See <span class="file">trophy.lua</span>, if you are really
 interested in how this works)</p>
 
+<p class="evthdr">
+Event name: <span class="evt">"show"</span><br />
+Handler function: <span class="func">f(ctx)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
+
+<p>This event fires right before the module takes control of the overlay, because
+the overlay was toggled on, or control switched from another module.</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"hide"</span><br />
+Handler function: <span class="func">f(ctx)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
+
+<p>This event fires just before <b>another</b> module takes control of the overlay,
+or the overlay gets toggled off.</p>
 
 <p class="evthdr">
 Event name: <span class="evt">"overlay_on"</span><br />
@@ -925,7 +943,7 @@ string, math, unpack, type, error, io, os, _VERSION, _G</span>
 </p>
 <p>
 sider adds:<br />
-<span class="func">log, memory, zlib, audio, match, _FILE</span>
+<span class="func">log, memory, zlib, audio, match, input, _FILE</span>
 </p>
 
 <p>You can also enable <span class="func">ffi</span> and <span class="func">bit</span> modules, which are LuaJIT
@@ -943,8 +961,47 @@ module.</p>
 
 
 <a class="top" href="#">Top</a>
+<a name="input">
+<h3>7. Input library</h3>
+</a>
+
+<p>The "input" library provides utility methods for managing input from
+keyboard and gamepads to the game. It is sometimes useful to restrict (block) such input
+when sider overlay is on, so that sider keyboard or gamepad controls do not also result
+in game actions. For example, you have logic in your overlay that uses arrow and "Enter"
+keys - to choose some kind of action, but the game also responds to "Enter" key as the
+action to activate particular mode.</p>
+
+<p class="func">
+input.set_blocked(block_flag, hard_block)
+</p>
+
+<p class="desc">This function set the state of input blocking. First parameter
+is a boolean indicating whether the input should be blocked or unblocked. The second
+parameter (optional) specifies whether a "hard block" should be done.<br />
+Return value: <b>nil</b></p>
+
+<p class="gwarn">When the "hard block" mode is activated, the overlay toggle and
+module switching are also disabled. This is only rarely needed, for example when
+entering text from keyboard, so make sure to use carefully,
+otherwise you risk loosing control of your game)</p>
+
+<p class="func">
+input.is_blocked()
+</p>
+
+<p class="desc">This function returns the current state of input-blocking.
+Returns 2 values:
+<ol>
+<li>true - if input is currently blocked, false - otherwise</li>
+<li>true - if "hard block" is also on, false - otherwise</li>
+</ol>
+</p>
+
+
+<a class="top" href="#">Top</a>
 <a name="memory">
-<h3>7. Memory library</h3>
+<h3>8. Memory library</h3>
 </a>
 
 <p>The "memory" library provides a set of low-level functions that
@@ -1109,7 +1166,7 @@ Returns 2 values:
 
 <a class="top" href="#">Top</a>
 <a name="zlib">
-<h3>8. Zlib library</h3>
+<h3>9. Zlib library</h3>
 </a>
 
 <p>This library contains a small set of utility functons to work with
@@ -1182,7 +1239,7 @@ if the input is not in WESYS-format, or <span class="file">nil</span>, if some e
 
 <a class="top" href="#">Top</a>
 <a name="audio">
-<h3>9. Audio library</h3>
+<h3>10. Audio library</h3>
 </a>
 
 <p>This library provides support for playing music and sound effects, which exist completely
@@ -1510,7 +1567,7 @@ return m
 
 <a class="top" href="#">Top</a>
 <a name="match">
-<h3>10. Match library</h3>
+<h3>11. Match library</h3>
 </a>
 
 <p>This is a library that allows you query for some statistics about the
