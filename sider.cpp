@@ -4051,8 +4051,15 @@ void HookXInputGetState()
             _org_XInputGetState = (PFN_XInputGetState)(*_xinput_get_state_holder);
             log_(L"_org_XInputGetState: %p\n", _org_XInputGetState);
 
-            *_xinput_get_state_holder = (BYTE*)sider_XInputGetState;
-            log_(L"now XInputGetState: %p\n", *_xinput_get_state_holder);
+            DWORD protection;
+            DWORD newProtection = PAGE_EXECUTE_READWRITE;
+            if (VirtualProtect(_xinput_get_state_holder, 8, newProtection, &protection)) {
+                *_xinput_get_state_holder = (BYTE*)sider_XInputGetState;
+                log_(L"now XInputGetState: %p\n", *_xinput_get_state_holder);
+            }
+            else {
+                log_(L"ERROR: VirtualProtect failed for: %p\n", _xinput_get_state_holder);
+            }
         }
     }
 }
@@ -7093,7 +7100,9 @@ bool hook_if_all_found() {
                 (BYTE*)pattern_def_stadium_name_tail, sizeof(pattern_def_stadium_name_tail)-1,
                 old_moved_call, new_moved_call);
 
-            HookXInputGetState();
+            if (_config->_overlay_enabled) {
+                HookXInputGetState();
+            }
 
             log_(L"-------------------------------\n");
         }
@@ -7126,6 +7135,10 @@ bool hook_if_all_found() {
 
 void init_direct_input()
 {
+    if (!_config->_overlay_enabled) {
+        return;
+    }
+
     // initialize DirectInput
     g_IDirectInput8 = NULL;
     if (SUCCEEDED(DirectInput8Create(

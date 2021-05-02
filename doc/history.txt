@@ -2,6 +2,13 @@ Sider 7 Release History
 =======================
 
 
+May 2, 2021
+v7.1.1
+- fix for problem introduced in version 7.1.0:
+  with overlay disabled (overlay_enabled = 0), sider was causing immediate game crash.
+  This is fixed now. Thanks to SinnyDeas for reporting the issue.
+
+
 April 12, 2021
 v7.1.0
 - added "input-blocking" feature
