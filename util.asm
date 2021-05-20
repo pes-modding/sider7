@@ -183,6 +183,29 @@ sider_trophy_check_hk proc
 
 sider_trophy_check_hk endp
 
+;0000000141F5659F | 4C:8DAB 00C40000         | lea r13,qword ptr ds:[rbx+C400]            |
+;0000000141F565A6 | 44:0FB6B3 04E90000       | movzx r14d,byte ptr ds:[rbx+E904]          |
+;0000000141F565AE | 48:8D83 04EC0000         | lea rax,qword ptr ds:[rbx+EC04]            |
+;0000000141F565B5 | D1FD                     | sar ebp,1                                  |
+;0000000141F565B7 | 41:80E6 01               | and r14b,1                                 |
+;...
+;0000000141F565DF | 8B8B 98040000            | mov ecx,dword ptr ds:[rbx+498]             |
+;0000000141F565E5 | 898F 70510000            | mov dword ptr ds:[rdi+5170],ecx            |
+
+sider_trophy_check2_hk proc
+
+        push    rax
+        sub     rsp,20h
+        mov     ecx,dword ptr [rbx+498h]
+        call    sider_trophy_check
+        mov     ecx,eax
+        mov     dword ptr [rdi+5170h],ecx
+        add     rsp,20h
+        pop     rax
+        ret
+
+sider_trophy_check2_hk endp
+
 sider_context_reset_hk proc
 
         push    rcx

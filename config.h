@@ -87,6 +87,7 @@ public:
     BYTE *_hp_at_set_team_id;
     BYTE *_hp_at_set_settings;
     BYTE *_hp_at_trophy_check;
+    BYTE *_hp_at_trophy_check2;
     BYTE *_hp_at_context_reset;
     BYTE *_hp_at_trophy_table;
     BYTE *_hp_at_ball_name;
@@ -163,6 +164,7 @@ public:
                  _hp_at_set_team_id(NULL),
                  _hp_at_set_settings(NULL),
                  _hp_at_trophy_check(NULL),
+                 _hp_at_trophy_check2(NULL),
                  _hp_at_context_reset(NULL),
                  _hp_at_set_stadium_choice(NULL),
                  _hp_at_check_kit_choice(NULL),

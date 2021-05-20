@@ -2,6 +2,11 @@ Sider 7 Release History
 =======================
 
 
+May 20, 2021
+v7.1.2
+- support for 1.06.00 game exe
+
+
 May 2, 2021
 v7.1.1
 - fix for problem introduced in version 7.1.0:

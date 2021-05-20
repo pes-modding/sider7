@@ -235,6 +235,15 @@ static BYTE pattern_trophy_check[20] =
     "\xd1\xfd";
 static int offs_trophy_check = 7;
 
+/*
+0000000141F565DF | 8B8B 98040000            | mov ecx,dword ptr ds:[rbx+498]             |
+0000000141F565E5 | 898F 70510000            | mov dword ptr ds:[rdi+5170],ecx            |
+*/
+static BYTE pattern_trophy_check2[13] =
+    "\x8b\x8b\x98\x04\x00\x00"
+    "\x89\x8f\x70\x51\x00\x00";
+static int offs_trophy_check2 = 0;
+
 /**
 static BYTE pattern_trophy_check_head[5] =
     "\x48\x83\xec\x28";

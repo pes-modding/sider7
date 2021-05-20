@@ -691,6 +691,8 @@ extern "C" DWORD sider_trophy_check(DWORD tournament_id);
 
 extern "C" DWORD sider_trophy_check_hk(DWORD tournament_id);
 
+extern "C" DWORD sider_trophy_check2_hk(DWORD tournament_id);
+
 extern "C" void sider_context_reset();
 
 extern "C" void sider_context_reset_hk();
@@ -6609,7 +6611,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 39
+#define NUM_PATTERNS 40
     BYTE *frag[NUM_PATTERNS+1];
     frag[1] = lcpk_pattern_at_read_file;
     frag[2] = lcpk_pattern_at_get_size;
@@ -6650,6 +6652,7 @@ DWORD install_func(LPVOID thread_param) {
     frag[37] = pattern_clear_sc;
     frag[38] = pattern_xinput;
     frag[39] = pattern_game_lite;
+    frag[40] = pattern_trophy_check2;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[1] = 24;
@@ -6657,6 +6660,7 @@ DWORD install_func(LPVOID thread_param) {
     _variations[4] = 30;
     _variations[5] = 31;
     _variations[7] = 20;
+    _variations[8] = 40;
     _variations[15] = 39;
     _variations[17] = 34;
     _variations[20] = 7;
@@ -6669,6 +6673,7 @@ DWORD install_func(LPVOID thread_param) {
     _variations[34] = 17;
     _variations[35] = 29;
     _variations[39] = 15;
+    _variations[40] = 8;
 
     size_t frag_len[NUM_PATTERNS+1];
     frag_len[1] = _config->_livecpk_enabled ? sizeof(lcpk_pattern_at_read_file)-1 : 0;
@@ -6710,6 +6715,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[37] = _config->_lua_enabled ? sizeof(pattern_clear_sc)-1 : 0;
     frag_len[38] = _config->_lua_enabled ? sizeof(pattern_xinput)-1 : 0;
     frag_len[39] = _config->_lua_enabled ? sizeof(pattern_game_lite)-1 : 0;
+    frag_len[40] = _config->_lua_enabled ? sizeof(pattern_trophy_check2)-1 : 0;
 
     int offs[NUM_PATTERNS+1];
     offs[1] = lcpk_offs_at_read_file;
@@ -6751,6 +6757,7 @@ DWORD install_func(LPVOID thread_param) {
     offs[37] = offs_clear_sc;
     offs[38] = offs_xinput;
     offs[39] = offs_game_lite;
+    offs[40] = offs_trophy_check2;
 
     BYTE **addrs[NUM_PATTERNS+1];
     addrs[1] = &_config->_hp_at_read_file;
@@ -6792,6 +6799,7 @@ DWORD install_func(LPVOID thread_param) {
     addrs[37] = &_config->_hp_at_clear_sc;
     addrs[38] = &_config->_hp_at_xinput;
     addrs[39] = &_config->_hp_at_game_lite;
+    addrs[40] = &_config->_hp_at_trophy_check2;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -6827,10 +6835,16 @@ DWORD install_func(LPVOID thread_param) {
                     frag[j], frag_len[j], hint);
                 if (p) {
                     if (_variations[j]!=0xff) {
-                        log_(L"Found pattern (hint match) %i (%i) of %i\n", j, _variations[j], NUM_PATTERNS);
+                        log_(L"Found pattern (hint match) %i (%i", j, _variations[j]);
+                        for (int k=0; k<sizeof(_variations)/sizeof(BYTE); k++) {
+                            if (_variations[j] != k && _variations[k] == j) {
+                                log_(L",%i", k);
+                            }
+                        }
+                        log_(L") of %i (at %p)\n", NUM_PATTERNS, p);
                     }
                     else {
-                        log_(L"Found pattern (hint match) %i of %i\n", j, NUM_PATTERNS);
+                        log_(L"Found pattern (hint match) %i of %i (at %p)\n", j, NUM_PATTERNS, p);
                     }
                     *(addrs[j]) = p + offs[j];
                 }
@@ -6891,7 +6905,7 @@ bool all_found(config_t *cfg) {
         all = all && (
             cfg->_hp_at_set_team_id > 0 &&
             cfg->_hp_at_set_settings > 0 &&
-            cfg->_hp_at_trophy_check > 0 &&
+            (cfg->_hp_at_trophy_check > 0 || cfg->_hp_at_trophy_check2 > 0) &&
             cfg->_hp_at_trophy_table > 0 &&
             (cfg->_hp_at_ball_name > 0 || cfg->_hp_at_game_lite > 0) &&
             cfg->_hp_at_stadium_name > 0 &&
@@ -6953,15 +6967,25 @@ void _install_func(IMAGE_SECTION_HEADER *h, int npatt, BYTE **frag, size_t *frag
             continue;
         }
         if (_variations[j]!=0xff) {
-            log_(L"Found pattern %i (%i) of %i\n", j, _variations[j], NUM_PATTERNS);
+            log_(L"Found pattern (hint match) %i (%i", j, _variations[j]);
+            for (int k=0; k<sizeof(_variations)/sizeof(BYTE); k++) {
+                if (_variations[j] != k && _variations[k] == j) {
+                    log_(L",%i", k);
+                }
+            }
+            log_(L") of %i (at %p)\n", NUM_PATTERNS, p);
         }
         else {
-            log_(L"Found pattern %i of %i\n", j, NUM_PATTERNS);
+            log_(L"Found pattern %i of %i (at %p)\n", j, NUM_PATTERNS, p);
         }
         *(addrs[j]) = p + offs[j];
         hcache.set(j,p);
         if (_variations[j]!=0xff) {
-            hcache.set(_variations[j],0);
+            for (int k=0; k<sizeof(_variations)/sizeof(BYTE); k++) {
+                if (_variations[j] != k && _variations[k] == j) {
+                    hcache.set(k,0);
+                }
+            }
         }
     }
 }
@@ -7005,6 +7029,7 @@ bool hook_if_all_found() {
             log_(L"sider_set_team_id: %p\n", sider_set_team_id_hk);
             log_(L"sider_set_settings: %p\n", sider_set_settings_hk);
             log_(L"sider_trophy_check: %p\n", sider_trophy_check_hk);
+            log_(L"sider_trophy_check2: %p\n", sider_trophy_check2_hk);
             log_(L"sider_trophy_table: %p\n", sider_trophy_table_hk);
             log_(L"sider_context_reset: %p\n", sider_context_reset_hk);
             log_(L"sider_ball_name: %p\n", sider_ball_name_hk);
@@ -7040,6 +7065,8 @@ bool hook_if_all_found() {
 
             if (_config->_hp_at_trophy_check)
                 hook_call_rcx(_config->_hp_at_trophy_check, (BYTE*)sider_trophy_check_hk, 0);
+            if (_config->_hp_at_trophy_check2)
+                hook_call_rcx(_config->_hp_at_trophy_check2, (BYTE*)sider_trophy_check2_hk, 0);
             if (_config->_hp_at_trophy_table)
                 hook_call_rcx(_config->_hp_at_trophy_table, (BYTE*)sider_trophy_table_hk, 0);
             if (_config->_hook_context_reset)
