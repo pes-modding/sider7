@@ -3891,6 +3891,12 @@ DWORD direct_input_poll(void *param) {
 
 void HookVtblMethod(void *self, int idx, map<BYTE**,BYTE*>* vtables, void *new_func, char *name)
 {
+    lock_t lock(&_cs);
+    if (!self) {
+        logu_("WARN: self is null. Nothing to hook");
+        return;
+    }
+
     BYTE** vtbl = *(BYTE***)self;
     BYTE *f = vtbl[idx];
 
@@ -3899,7 +3905,6 @@ void HookVtblMethod(void *self, int idx, map<BYTE**,BYTE*>* vtables, void *new_f
         //DBG(64) logu_("%s already hooked.\n", name);
     }
     else {
-        lock_t lock(&_cs);
         logu_("Hooking %s\n", name);
         vtables->insert(pair<BYTE**,BYTE*>(vtbl, f));
         logu_("org %s = %p\n", name, f);
@@ -3919,6 +3924,12 @@ void HookVtblMethod(void *self, int idx, map<BYTE**,BYTE*>* vtables, void *new_f
 
 void HookVtblMethod2(void *self, int idx, void **old_func, void *new_func, char *name)
 {
+    lock_t lock(&_cs);
+    if (!self) {
+        logu_("WARN: self is null. Nothing to hook");
+        return;
+    }
+
     BYTE** vtbl = *(BYTE***)self;
     BYTE *f = vtbl[idx];
 
@@ -3927,7 +3938,6 @@ void HookVtblMethod2(void *self, int idx, void **old_func, void *new_func, char 
         //DBG(64) logu_("%s already hooked.\n", name);
     }
     else {
-        lock_t lock(&_cs);
         logu_("Hooking %s\n", name);
         *old_func = f;
         logu_("org %s = %p\n", name, f);

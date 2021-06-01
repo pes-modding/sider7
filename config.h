@@ -34,6 +34,7 @@ using namespace std;
 #define DEFAULT_CACHE_SIZE 32
 #define DEFAULT_MATCH_STATS_ENABLED false
 #define DEFAULT_GLOBAL_BLOCK_INPUT false
+#define DEFAULT_HOOK_ALL_KEYBOARDS true
 
 extern wchar_t sider_dir[MAX_PATH];
 
@@ -119,6 +120,7 @@ public:
     bool _hook_context_reset;
     bool _hook_trophy_check;
     bool _hook_trophy_table;
+    bool _hook_all_keyboards;
 
     ~config_t() {}
     config_t(const wstring& section_name, const wchar_t* config_ini) :
@@ -193,6 +195,7 @@ public:
                  _hook_context_reset(true),
                  _hook_trophy_check(true),
                  _hook_trophy_table(true),
+                 _hook_all_keyboards(DEFAULT_HOOK_ALL_KEYBOARDS),
                  _num_minutes(0)
     {
         wchar_t settings[32767];
@@ -483,6 +486,10 @@ public:
 
         _hook_trophy_check = GetPrivateProfileInt(_section_name.c_str(),
             L"hook.trophy-check", _hook_trophy_check,
+            config_ini);
+
+        _hook_all_keyboards = GetPrivateProfileInt(_section_name.c_str(),
+            L"hook.all-keyboards", _hook_all_keyboards,
             config_ini);
     }
 };
