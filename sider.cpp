@@ -3967,13 +3967,35 @@ HRESULT sider_CreateDevice(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVI
         log_(L"rguid: %s\n", guid_str);
     }
     if (rguid == GUID_SysKeyboard) {
-        logu_("this is a keyboard device: %p\n", *lplpDirectInputDevice);
+        logu_("this is a keyboard device (GUID_SysKeyboard): %p\n", *lplpDirectInputDevice);
         //HookVtblMethod(*lplpDirectInputDevice, 9, &_vtables, sider_GetDeviceState, "IDirectInputDevice8::GetDeviceState");
         HookVtblMethod2(*lplpDirectInputDevice, 9, (void**)&_org_GetDeviceStateKeyboard, sider_GetDeviceStateKeyboard, "IDirectInputDevice8::GetDeviceState");
     }
     else if (rguid == GUID_SysMouse) {
-        logu_("this is a mouse device: %p\n", *lplpDirectInputDevice);
-        //HookVtblMethod(*lplpDirectInputDevice, 9, &_vtables, sider_GetDeviceState, "IDirectInputDevice8::GetDeviceState");
+        logu_("this is a mouse device (GUID_SysMouse): %p\n", *lplpDirectInputDevice);
+    }
+    else if (rguid == GUID_Joystick) {
+        logu_("this is a joystick device (GUID_Joystick): %p\n", *lplpDirectInputDevice);
+    }
+    else if (rguid == GUID_SysMouseEm) {
+        logu_("this is a mouse device (GUID_SysMouseEm): %p\n", *lplpDirectInputDevice);
+    }
+    else if (rguid == GUID_SysMouseEm2) {
+        logu_("this is a mouse device (GUID_SysMouseEm2): %p\n", *lplpDirectInputDevice);
+    }
+    else if (rguid == GUID_SysKeyboardEm) {
+        logu_("this is a keyboard device (GUID_SysKeyboardEm): %p\n", *lplpDirectInputDevice);
+        if (_config->_hook_all_keyboards) {
+            HookVtblMethod2(
+                *lplpDirectInputDevice, 9, (void**)&_org_GetDeviceStateKeyboard, sider_GetDeviceStateKeyboard, "IDirectInputDevice8::GetDeviceState");
+        }
+    }
+    else if (rguid == GUID_SysKeyboardEm2) {
+        logu_("this is a keyboard device (GUID_SysKeyboardEm2): %p\n", *lplpDirectInputDevice);
+        if (_config->_hook_all_keyboards) {
+            HookVtblMethod2(
+                *lplpDirectInputDevice, 9, (void**)&_org_GetDeviceStateKeyboard, sider_GetDeviceStateKeyboard, "IDirectInputDevice8::GetDeviceState");
+        }
     }
     else {
         logu_("this is some other device: %p\n", *lplpDirectInputDevice);
