@@ -3922,24 +3922,29 @@ void HookVtblMethod(void *self, int idx, map<BYTE**,BYTE*>* vtables, void *new_f
     }
 }
 
-void HookVtblMethod2(void *self, int idx, void **old_func, void *new_func, char *name)
+void HookVtblMethod2(void *self, int idx, void **old_func, void **old_func2, void *new_func, void *new_func2, char *name)
 {
     lock_t lock(&_cs);
     if (!self) {
-        logu_("WARN: self is null. Nothing to hook");
+        logu_("WARN: self is null. Nothing to hook\n");
         return;
     }
 
     BYTE** vtbl = *(BYTE***)self;
     BYTE *f = vtbl[idx];
 
-    //DBG(64) logu_("current %s = %p\n", name, f);
     if ((BYTE*)f == (BYTE*)new_func) {
-        //DBG(64) logu_("%s already hooked.\n", name);
+        logu_("%s already hooked to %p.\n", name, new_func);
     }
     else {
         logu_("Hooking %s\n", name);
-        *old_func = f;
+        if ((BYTE*)f == (BYTE*)new_func2) {
+            *old_func = *old_func2;
+        }
+        else {
+            *old_func = f;
+        }
+        logu_("old_func is now: %p\n", *old_func);
         logu_("org %s = %p\n", name, f);
 
         DWORD protection = 0;
@@ -3957,7 +3962,7 @@ void HookVtblMethod2(void *self, int idx, void **old_func, void *new_func, char 
 
 HRESULT sider_CreateDevice(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVICE * lplpDirectInputDevice, LPUNKNOWN pUnkOuter)
 {
-    logu_("sider_CreateDevice(self:%p): called\n", self);
+    logu_("****\nsider_CreateDevice(self:%p): called\n", self);
     /**
     map<BYTE**,BYTE*>::iterator it = _vtables.find(*(BYTE***)self);
     if (it == _vtables.end()) {
@@ -3978,8 +3983,11 @@ HRESULT sider_CreateDevice(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVI
     }
     if (rguid == GUID_SysKeyboard) {
         logu_("this is a keyboard device (GUID_SysKeyboard): %p\n", *lplpDirectInputDevice);
-        //HookVtblMethod(*lplpDirectInputDevice, 9, &_vtables, sider_GetDeviceState, "IDirectInputDevice8::GetDeviceState");
-        HookVtblMethod2(*lplpDirectInputDevice, 9, (void**)&_org_GetDeviceStateKeyboard, sider_GetDeviceStateKeyboard, "IDirectInputDevice8::GetDeviceState");
+        HookVtblMethod2(
+            *lplpDirectInputDevice, 9,
+            (void**)&_org_GetDeviceStateKeyboard, (void**)&_org_GetDeviceStateGamepad,
+            sider_GetDeviceStateKeyboard, sider_GetDeviceStateGamepad,
+            "IDirectInputDevice8::GetDeviceState");
     }
     else if (rguid == GUID_SysMouse) {
         logu_("this is a mouse device (GUID_SysMouse): %p\n", *lplpDirectInputDevice);
@@ -3997,20 +4005,34 @@ HRESULT sider_CreateDevice(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVI
         logu_("this is a keyboard device (GUID_SysKeyboardEm): %p\n", *lplpDirectInputDevice);
         if (_config->_hook_all_keyboards) {
             HookVtblMethod2(
-                *lplpDirectInputDevice, 9, (void**)&_org_GetDeviceStateKeyboard, sider_GetDeviceStateKeyboard, "IDirectInputDevice8::GetDeviceState");
+                *lplpDirectInputDevice, 9,
+                (void**)&_org_GetDeviceStateKeyboard, (void**)&_org_GetDeviceStateGamepad,
+                sider_GetDeviceStateKeyboard, sider_GetDeviceStateGamepad,
+                "IDirectInputDevice8::GetDeviceState");
         }
     }
     else if (rguid == GUID_SysKeyboardEm2) {
         logu_("this is a keyboard device (GUID_SysKeyboardEm2): %p\n", *lplpDirectInputDevice);
         if (_config->_hook_all_keyboards) {
             HookVtblMethod2(
-                *lplpDirectInputDevice, 9, (void**)&_org_GetDeviceStateKeyboard, sider_GetDeviceStateKeyboard, "IDirectInputDevice8::GetDeviceState");
+                *lplpDirectInputDevice, 9,
+                (void**)&_org_GetDeviceStateKeyboard, (void**)&_org_GetDeviceStateGamepad,
+                sider_GetDeviceStateKeyboard, sider_GetDeviceStateGamepad,
+                "IDirectInputDevice8::GetDeviceState");
         }
     }
     else {
         logu_("this is some other device: %p\n", *lplpDirectInputDevice);
-        //HookVtblMethod(*lplpDirectInputDevice, 9, &_vtables, sider_GetDeviceState, "IDirectInputDevice8::GetDeviceState");
-        HookVtblMethod2(*lplpDirectInputDevice, 9, (void**)&_org_GetDeviceStateGamepad, sider_GetDeviceStateGamepad, "IDirectInputDevice8::GetDeviceState");
+        if (_config->_controller_input_blocking_enabled) {
+            HookVtblMethod2(
+                *lplpDirectInputDevice, 9,
+                (void**)&_org_GetDeviceStateGamepad, (void**)&_org_GetDeviceStateKeyboard,
+                sider_GetDeviceStateGamepad, sider_GetDeviceStateKeyboard,
+                "IDirectInputDevice8::GetDeviceState");
+        }
+        else {
+            logu_("game-input-blocking is disabled. Nothing to do here\n");
+        }
     }
     return res;
 }
@@ -4018,17 +4040,6 @@ HRESULT sider_CreateDevice(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVI
 HRESULT sider_GetDeviceStateGamepad(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData)
 {
     DBG(16384) logu_("sider_GetDeviceStateGamepad(self:%p): called\n", self);
-    /**
-    map<BYTE**,BYTE*>::iterator it = _vtables.find(*(BYTE***)self);
-    if (it == _vtables.end()) {
-        // bad
-        logu_("unable to find vtable entry for self: %p\n");
-        return S_OK;
-    }
-    BYTE *f = it->second;
-    PFN_IDirectInputDevice8_GetDeviceState org_f = (PFN_IDirectInputDevice8_GetDeviceState)f;
-    HRESULT res = org_f(self, cbData, lpvData);
-    **/
     HRESULT res = _org_GetDeviceStateGamepad(self, cbData, lpvData);
     if (_overlay_on && (_config->_global_block_input || _block_input)) {
         if (self != g_IDirectInputDevice8) {
@@ -4043,21 +4054,14 @@ HRESULT sider_GetDeviceStateGamepad(IDirectInputDevice8 *self, DWORD cbData, LPV
 HRESULT sider_GetDeviceStateKeyboard(IDirectInputDevice8 *self, DWORD cbData, LPVOID lpvData)
 {
     DBG(16384) logu_("sider_GetDeviceStateKeyboard(self:%p): called\n", self);
-    /**
-    map<BYTE**,BYTE*>::iterator it = _vtables.find(*(BYTE***)self);
-    if (it == _vtables.end()) {
-        // bad
-        logu_("unable to find vtable entry for self: %p\n");
-        return S_OK;
-    }
-    BYTE *f = it->second;
-    PFN_IDirectInputDevice8_GetDeviceState org_f = (PFN_IDirectInputDevice8_GetDeviceState)f;
-    HRESULT res = org_f(self, cbData, lpvData);
-    **/
     HRESULT res = _org_GetDeviceStateKeyboard(self, cbData, lpvData);
     if (_overlay_on && (_config->_global_block_input || _block_input)) {
-        // block input to game
-        return DIERR_INPUTLOST;
+        // still check for our gamepad interface, because it is possible
+        // that both types of devices are funneled through one intermediate
+        if (self != g_IDirectInputDevice8) {
+            // block input to game
+            return DIERR_INPUTLOST;
+        }
     }
     DBG(16384) logu_("sider_GetDeviceStateKeyboard(self:%p): res = %x\n", self, res);
     return res;
@@ -6587,6 +6591,7 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"overlay.toggle.sound = %s\n", _config->_overlay_toggle_sound.c_str());
     log_(L"overlay.toggle.sound-volume = %0.2f\n", _config->_overlay_toggle_sound_volume);
     log_(L"overlay.block-input-when-on = %d\n", _config->_global_block_input);
+    log_(L"overlay.gamepad-input-blocking.enabled = %d\n", _config->_controller_input_blocking_enabled);
     log_(L"match-stats.enabled = %d\n", _config->_match_stats_enabled);
     log_(L"vkey.reload-1 = 0x%02x\n", _config->_vkey_reload_1);
     log_(L"vkey.reload-2 = 0x%02x\n", _config->_vkey_reload_2);
@@ -6629,6 +6634,7 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"hook.context-reset = %d\n", _config->_hook_context_reset);
     log_(L"hook.trophy-table = %d\n", _config->_hook_trophy_table);
     log_(L"hook.trophy-check = %d\n", _config->_hook_trophy_check);
+    log_(L"hook.all-keyboards = %d\n", _config->_hook_all_keyboards);
     log_(L"--------------------------\n");
 
     for (vector<wstring>::iterator it = _config->_cpk_roots.begin();
@@ -7159,7 +7165,7 @@ bool hook_if_all_found() {
                 (BYTE*)pattern_def_stadium_name_tail, sizeof(pattern_def_stadium_name_tail)-1,
                 old_moved_call, new_moved_call);
 
-            if (_config->_overlay_enabled) {
+            if (_config->_overlay_enabled && _config->_controller_input_blocking_enabled) {
                 HookXInputGetState();
             }
 
@@ -7206,8 +7212,7 @@ void init_direct_input()
         logu_("g_IDirectInput8 = %p\n", g_IDirectInput8);
 
         // hook CreateDevice
-        //HookVtblMethod(g_IDirectInput8, 3, &_vtables, sider_CreateDevice, "IDirectInput8::CreateDevice");
-        HookVtblMethod2(g_IDirectInput8, 3, (void**)&_org_CreateDevice, sider_CreateDevice, "IDirectInput8::CreateDevice");
+        HookVtblMethod2(g_IDirectInput8, 3, (void**)&_org_CreateDevice, NULL, sider_CreateDevice, NULL, "IDirectInput8::CreateDevice");
     }
     else {
         logu_("PROBLEM creating DirectInput interface\n");

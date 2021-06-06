@@ -35,6 +35,7 @@ using namespace std;
 #define DEFAULT_MATCH_STATS_ENABLED false
 #define DEFAULT_GLOBAL_BLOCK_INPUT false
 #define DEFAULT_HOOK_ALL_KEYBOARDS true
+#define DEFAULT_CONTROLLER_INPUT_BLOCKING_ENABLED true
 
 extern wchar_t sider_dir[MAX_PATH];
 
@@ -121,6 +122,7 @@ public:
     bool _hook_trophy_check;
     bool _hook_trophy_table;
     bool _hook_all_keyboards;
+    bool _controller_input_blocking_enabled;
 
     ~config_t() {}
     config_t(const wstring& section_name, const wchar_t* config_ini) :
@@ -196,6 +198,7 @@ public:
                  _hook_trophy_check(true),
                  _hook_trophy_table(true),
                  _hook_all_keyboards(DEFAULT_HOOK_ALL_KEYBOARDS),
+                 _controller_input_blocking_enabled(DEFAULT_CONTROLLER_INPUT_BLOCKING_ENABLED),
                  _num_minutes(0)
     {
         wchar_t settings[32767];
@@ -490,6 +493,10 @@ public:
 
         _hook_all_keyboards = GetPrivateProfileInt(_section_name.c_str(),
             L"hook.all-keyboards", _hook_all_keyboards,
+            config_ini);
+
+        _controller_input_blocking_enabled = GetPrivateProfileInt(_section_name.c_str(),
+            L"overlay.gamepad-input-blocking.enabled", _controller_input_blocking_enabled,
             config_ini);
     }
 };
