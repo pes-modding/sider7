@@ -4031,7 +4031,7 @@ HRESULT sider_CreateDevice(IDirectInput8 *self, REFGUID rguid, LPDIRECTINPUTDEVI
                 "IDirectInputDevice8::GetDeviceState");
         }
         else {
-            logu_("game-input-blocking is disabled. Nothing to do here\n");
+            logu_("gamepad-input-blocking is disabled. Nothing to do here\n");
         }
     }
     return res;
