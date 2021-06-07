@@ -2,6 +2,12 @@ Sider 7 Release History
 =======================
 
 
+June 7, 2021
+v7.1.3
+- fixes for gamepad input management logic error that caused crashes on game startup
+  for some folks
+
+
 May 20, 2021
 v7.1.2
 - support for 1.06.00 game exe
