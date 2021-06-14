@@ -802,4 +802,32 @@ static BYTE pattern_xinput[12] =
     "\xe8";
 static int offs_xinput = 11;
 
+/**
+0000000141F0DA7D | 25 00C0FFFF                   | and eax,FFFFC000                           |
+0000000141F0DA82 | 3D 0040FEFF                   | cmp eax,FFFE4000                           |
+0000000141F0DA87 | 75 09                         | jne pes2021.141F0DA92                      |
+0000000141F0DA89 | C741 20 00000D00              | mov dword ptr ds:[rcx+20],D0000            |
+0000000141F0DA90 | EB 11                         | jmp pes2021.141F0DAA3                      |
+0000000141F0DA92 | 48:8D41 20                    | lea rax,qword ptr ds:[rcx+20]              |
+0000000141F0DA96 | 4C:8D5424 18                  | lea r10,qword ptr ss:[rsp+18]              |
+0000000141F0DA9B | 49:3BC2                       | cmp rax,r10                                |
+0000000141F0DA9E | 74 03                         | je pes2021.141F0DAA3                       |
+0000000141F0DAA0 | 44:8900                       | mov dword ptr ds:[rax],r8d                 | set edit team id
+0000000141F0DAA3 | 8B4424 28                     | mov eax,dword ptr ss:[rsp+28]              |
+0000000141F0DAA7 | 8941 28                       | mov dword ptr ds:[rcx+28],eax              |
+0000000141F0DAAA | 8B4424 30                     | mov eax,dword ptr ss:[rsp+30]              |
+0000000141F0DAAE | 8941 2C                       | mov dword ptr ds:[rcx+2C],eax              |
+0000000141F0DAB1 | B0 01                         | mov al,1                                   |
+0000000141F0DAB3 | 44:8949 24                    | mov dword ptr ds:[rcx+24],r9d              |
+0000000141F0DAB7 | 48:8951 10                    | mov qword ptr ds:[rcx+10],rdx              |
+0000000141F0DABB | 48:C701 02000000              | mov qword ptr ds:[rcx],2                   |
+0000000141F0DAC2 | C3                            | ret                                        |
+**/
+static BYTE pattern_set_edit_team_id[20] =
+    "\x25\x00\xc0\xff\xff"
+    "\x3d\x00\x40\xfe\xff"
+    "\x75\x09"
+    "\xc7\x41\x20\x00\x00\x0d\x00";
+static int offs_set_edit_team_id = 0xb3 - 0x7d;
+
 #endif

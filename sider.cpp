@@ -290,6 +290,7 @@ void *_uniparam_base = NULL;
 KIT_STATUS_INFO *_ksi = NULL;
 TEAM_INFO_STRUCT *_home_team_info = NULL;
 TEAM_INFO_STRUCT *_away_team_info = NULL;
+DWORD _edit_team_id;
 
 extern "C" SCOREBOARD_INFO *_sci = NULL;
 int _stats_table_index = 0;
@@ -750,6 +751,10 @@ extern "C" void sider_copy_clock_hk();
 extern "C" void sider_clear_sc(SCOREBOARD_INFO *sci);
 
 extern "C" void sider_clear_sc_hk();
+
+extern "C" void sider_set_edit_team_id_hk();
+
+extern "C" void sider_set_edit_team_id(DWORD team_id_encoded);
 
 static DWORD dwThreadId;
 static DWORD hookingThreadId = 0;
@@ -5041,6 +5046,27 @@ void sider_clear_team_for_kits(KIT_STATUS_INFO *ksi, DWORD *which)
     }
 }
 
+void sider_set_edit_team_id(DWORD team_id_encoded)
+{
+    DWORD edit_team_id = decode_team_id(team_id_encoded);
+    if (_edit_team_id != edit_team_id) {
+        _edit_team_id = edit_team_id;
+        logu_("sider_edit_team_id: team = %d\n", _edit_team_id);
+        if (_config->_lua_enabled) {
+            if (_edit_team_id != 0x1ffff) {
+                // set
+                set_context_field_int("edit_mode_team", decode_team_id(team_id_encoded));
+                set_context_field_int("home_team", decode_team_id(team_id_encoded));
+            }
+            else {
+                // clear
+                set_context_field_nil("edit_mode_team");
+                set_context_field_nil("home_team");
+            }
+        }
+    }
+}
+
 BYTE* sider_loaded_uniparam(BYTE* uniparam)
 {
     size_t sz = *(size_t*)(uniparam-8);
@@ -6649,7 +6675,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 40
+#define NUM_PATTERNS 41
     BYTE *frag[NUM_PATTERNS+1];
     frag[1] = lcpk_pattern_at_read_file;
     frag[2] = lcpk_pattern_at_get_size;
@@ -6691,6 +6717,7 @@ DWORD install_func(LPVOID thread_param) {
     frag[38] = pattern_xinput;
     frag[39] = pattern_game_lite;
     frag[40] = pattern_trophy_check2;
+    frag[41] = pattern_set_edit_team_id;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[1] = 24;
@@ -6754,6 +6781,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[38] = _config->_lua_enabled ? sizeof(pattern_xinput)-1 : 0;
     frag_len[39] = _config->_lua_enabled ? sizeof(pattern_game_lite)-1 : 0;
     frag_len[40] = _config->_lua_enabled ? sizeof(pattern_trophy_check2)-1 : 0;
+    frag_len[41] = _config->_lua_enabled ? sizeof(pattern_set_edit_team_id)-1 : 0;
 
     int offs[NUM_PATTERNS+1];
     offs[1] = lcpk_offs_at_read_file;
@@ -6796,6 +6824,7 @@ DWORD install_func(LPVOID thread_param) {
     offs[38] = offs_xinput;
     offs[39] = offs_game_lite;
     offs[40] = offs_trophy_check2;
+    offs[41] = offs_set_edit_team_id;
 
     BYTE **addrs[NUM_PATTERNS+1];
     addrs[1] = &_config->_hp_at_read_file;
@@ -6838,6 +6867,7 @@ DWORD install_func(LPVOID thread_param) {
     addrs[38] = &_config->_hp_at_xinput;
     addrs[39] = &_config->_hp_at_game_lite;
     addrs[40] = &_config->_hp_at_trophy_check2;
+    addrs[41] = &_config->_hp_at_set_edit_team_id;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -6961,6 +6991,7 @@ bool all_found(config_t *cfg) {
             cfg->_hp_at_copy_clock > 0 &&
             cfg->_hp_at_clear_sc > 0 &&
             cfg->_hp_at_xinput > 0 &&
+            (cfg->_hp_at_set_edit_team_id > 0 || cfg->_hp_at_game_lite > 0) &&
             true
         );
     }
@@ -7164,6 +7195,10 @@ bool hook_if_all_found() {
                 (BYTE*)pattern_def_stadium_name_head, sizeof(pattern_def_stadium_name_head)-1,
                 (BYTE*)pattern_def_stadium_name_tail, sizeof(pattern_def_stadium_name_tail)-1,
                 old_moved_call, new_moved_call);
+
+            if (_config->_hp_at_set_edit_team_id) {
+                hook_call(_config->_hp_at_set_edit_team_id, (BYTE*)sider_set_edit_team_id_hk, 3);
+            }
 
             if (_config->_overlay_enabled && _config->_controller_input_blocking_enabled) {
                 HookXInputGetState();

@@ -27,6 +27,7 @@ extern sider_set_team_for_kits:proc
 extern sider_clear_team_for_kits:proc
 extern sider_loaded_uniparam:proc
 extern sider_clear_sc:proc
+extern sider_set_edit_team_id:proc
 
 extern _sci:dq
 
@@ -598,5 +599,49 @@ sider_clear_sc_hk proc
         ret
 
 sider_clear_sc_hk endp
+
+;0000000141F0DA7D | 25 00C0FFFF                   | and eax,FFFFC000                           |
+;0000000141F0DA82 | 3D 0040FEFF                   | cmp eax,FFFE4000                           |
+;0000000141F0DA87 | 75 09                         | jne pes2021.141F0DA92                      |
+;0000000141F0DA89 | C741 20 00000D00              | mov dword ptr ds:[rcx+20],D0000            |
+;0000000141F0DA90 | EB 11                         | jmp pes2021.141F0DAA3                      |
+;0000000141F0DA92 | 48:8D41 20                    | lea rax,qword ptr ds:[rcx+20]              |
+;0000000141F0DA96 | 4C:8D5424 18                  | lea r10,qword ptr ss:[rsp+18]              |
+;0000000141F0DA9B | 49:3BC2                       | cmp rax,r10                                |
+;0000000141F0DA9E | 74 03                         | je pes2021.141F0DAA3                       |
+;0000000141F0DAA0 | 44:8900                       | mov dword ptr ds:[rax],r8d                 | set edit team id
+;0000000141F0DAA3 | 8B4424 28                     | mov eax,dword ptr ss:[rsp+28]              |
+;0000000141F0DAA7 | 8941 28                       | mov dword ptr ds:[rcx+28],eax              |
+;0000000141F0DAAA | 8B4424 30                     | mov eax,dword ptr ss:[rsp+30]              |
+;0000000141F0DAAE | 8941 2C                       | mov dword ptr ds:[rcx+2C],eax              |
+;0000000141F0DAB1 | B0 01                         | mov al,1                                   |
+;0000000141F0DAB3 | 44:8949 24                    | mov dword ptr ds:[rcx+24],r9d              |
+;0000000141F0DAB7 | 48:8951 10                    | mov qword ptr ds:[rcx+10],rdx              |
+;0000000141F0DABB | 48:C701 02000000              | mov qword ptr ds:[rcx],2                   |
+;0000000141F0DAC2 | C3                            | ret                                        |
+
+sider_set_edit_team_id_hk proc
+
+        push    rcx
+        push    rdx
+        push    r8
+        push    r9
+        push    r10
+        push    r11
+        sub     rsp,28h
+        mov     rcx,r8
+        and     rcx,0ffffffffh
+        call    sider_set_edit_team_id
+        mov     al,1
+        add     rsp,28h
+        pop     r11
+        pop     r10
+        pop     r9
+        pop     r8
+        pop     rdx
+        pop     rcx
+        ret
+
+sider_set_edit_team_id_hk endp
 
 end

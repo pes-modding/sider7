@@ -108,6 +108,7 @@ public:
     BYTE *_hp_at_copy_clock;
     BYTE *_hp_at_clear_sc;
     BYTE *_hp_at_xinput;
+    BYTE *_hp_at_set_edit_team_id;
 
     BYTE *_hp_at_set_min_time;
     BYTE *_hp_at_set_max_time;
@@ -182,6 +183,7 @@ public:
                  _hp_at_copy_clock(NULL),
                  _hp_at_clear_sc(NULL),
                  _hp_at_xinput(NULL),
+                 _hp_at_set_edit_team_id(NULL),
                  _hp_at_set_min_time(NULL),
                  _hp_at_set_max_time(NULL),
                  _hp_at_call_set_minutes(NULL),
