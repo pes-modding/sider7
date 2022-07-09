@@ -1773,23 +1773,6 @@ void read_gamepad_global_mapping(gamepad_config_t*& config)
     config = new gamepad_config_t(L"gamepad", gamepad_ini);
 }
 
-static bool skip_process(wchar_t* name)
-{
-    wchar_t *filename = wcsrchr(name, L'\\');
-    if (filename) {
-        if (wcsicmp(filename, L"\\explorer.exe") == 0) {
-            return true;
-        }
-        if (wcsicmp(filename, L"\\steam.exe") == 0) {
-            return true;
-        }
-        if (wcsicmp(filename, L"\\steamwebhelper.exe") == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static bool is_sider(wchar_t* name)
 {
     wchar_t *filename = wcsrchr(name, L'\\');
@@ -1801,79 +1784,11 @@ static bool is_sider(wchar_t* name)
     return false;
 }
 
-static bool write_mapping_info(config_t *config)
-{
-    // determine the size needed
-    DWORD size = sizeof(wchar_t);
-    vector<wstring>::iterator it;
-    for (it = _config->_exe_names.begin();
-            it != _config->_exe_names.end();
-            it++) {
-        size += sizeof(wchar_t) * (it->size() + 1);
-    }
-
-    _mh = CreateFileMapping(
-        INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE | SEC_COMMIT,
-        0, size, SIDER_FM);
-    if (!_mh) {
-        log_(L"W: CreateFileMapping FAILED: %d\n", GetLastError());
-        return false;
-    }
-    wchar_t *mem = (wchar_t*)MapViewOfFile(_mh, FILE_MAP_WRITE, 0, 0, 0);
-    if (!mem) {
-        log_(L"W: MapViewOfFile FAILED: %d\n", GetLastError());
-        CloseHandle(_mh);
-        return false;
-    }
-
-    memset(mem, 0, size);
-    for (it = config->_exe_names.begin();
-            it != _config->_exe_names.end();
-            it++) {
-        wcscpy(mem, it->c_str());
-        mem += it->size() + 1;
-    }
-    return true;
-}
-
 static bool is_pes(wchar_t* name, wstring** match)
 {
-    HANDLE h = OpenFileMapping(FILE_MAP_READ, FALSE, SIDER_FM);
-    if (!h) {
-        int err = GetLastError();
-        wchar_t *t = new wchar_t[MAX_PATH];
-        GetModuleFileName(NULL, t, MAX_PATH);
-        log_(L"R: OpenFileMapping FAILED (for %s): %d\n", t, err);
-        delete t;
-        return false;
-    }
-    BYTE *patterns = (BYTE*)MapViewOfFile(h, FILE_MAP_READ, 0, 0, 0);
-    if (!patterns) {
-        int err= GetLastError();
-        wchar_t *t = new wchar_t[MAX_PATH];
-        GetModuleFileName(NULL, t, MAX_PATH);
-        log_(L"R: MapViewOfFile FAILED (for %s): %d\n", t, err);
-        delete t;
-        CloseHandle(h);
-        return false;
-    }
-
-    bool result = false;
     wchar_t *filename = wcsrchr(name, L'\\');
-    if (filename) {
-        wchar_t *s = (wchar_t*)patterns;
-        while (*s != L'\0') {
-            if (wcsicmp(filename, s) == 0) {
-                *match = new wstring(s);
-                result = true;
-                break;
-            }
-            s = s + wcslen(s) + 1;
-        }
-    }
-    UnmapViewOfFile(h);
-    CloseHandle(h);
-    return result;
+    *match = new wstring(filename);
+    return true;
 }
 
 void set_controller_poll_delay() {
@@ -7331,19 +7246,9 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
             if (!init_paths()) {
                 return FALSE;
             }
-            //log_(L"DLL_PROCESS_ATTACH: %s\n", module_filename);
-            if (skip_process(module_filename)) {
-                return FALSE;
-            }
-
             if (is_sider(module_filename)) {
-                _is_sider = true;
-                read_configuration(_config);
-                if (!write_mapping_info(_config)) {
-                    return FALSE;
-                }
-
-                return TRUE;
+                // safeguard not to load this
+                return FALSE;
             }
 
             if (is_pes(module_filename, &match)) {
@@ -7352,13 +7257,8 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
 
                 wstring version;
                 get_module_version(hDLL, version);
-                open_log_(L"============================\n");
-                log_(L"Sider DLL: version %s\n", version.c_str());
+                start_log_(L"Sider DLL: version %s\n", version.c_str());
                 log_(L"Filename match: %s\n", match->c_str());
-
-                // set up a thread-scope hook, to replace global hook
-                // so that we stay mapped in game process
-                setHook1();
 
                 _overlay_on = _config->_overlay_on_from_start;
                 _overlay_header = L"sider ";
@@ -7612,27 +7512,10 @@ LRESULT CALLBACK meconnect(int code, WPARAM wParam, LPARAM lParam)
 
 void setHook()
 {
-    handle = SetWindowsHookEx(WH_CBT, meconnect, myHDLL, 0);
-    log_(L"------------------------\n");
-    log_(L"handle = %p\n", handle);
-}
-
-void setHook1()
-{
-    handle1 = SetWindowsHookEx(WH_FOREGROUNDIDLE, sider_foreground_idle_proc, myHDLL, GetCurrentThreadId());
-    log_(L"handle1 = %p\n", handle1);
 }
 
 void unsetHook(bool all)
 {
-    open_log_(L"windows hooks: handle = %p\n", handle);
-    UnhookWindowsHookEx(handle);
-    log_(L"windows hooks: CBT unhooked\n");
-    if (all && kb_handle) {
-        UnhookWindowsHookEx(kb_handle);
-        log_(L"windows hooks: keyboard unhooked\n");
-    }
-    close_log_();
 }
 
 bool get_start_game(wstring &start_game) {
