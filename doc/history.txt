@@ -2,6 +2,13 @@ Sider 7 Release History
 =======================
 
 
+July 9, 2022
+v7.2.0
+- special version with modified game-attachment logic 
+  (no sider.exe. Game patcher program is included, with support of PES2021.exe versions 1.06.00 - 1.07.02)
+- tested successfully on Windows, Ubuntu Linux, and Steam Deck
+
+
 June 15, 2021
 v7.1.4
 - fix for "home_team" and "edit_home_team" settings in lua context object
