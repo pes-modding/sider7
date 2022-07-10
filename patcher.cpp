@@ -22,6 +22,8 @@ void read_patch(struct patch_t *p) {
         printf("WARN: unable to open %s for reading.\n", p->filename);
         return;
     }
+    // the format is that produced by "cmp -l" unix tool:
+    // each line has: <decimal-offset> <octal-old> <octal-new>
     p->changes = new list<struct change_t>();
     while (!feof(f)) {
         struct change_t c;
@@ -68,7 +70,7 @@ void read_patches(char *ininame, list<patch_t> *li) {
 bool apply_patch(char *filename, list<struct change_t> *li) {
     FILE *f = fopen(filename, "r+b");
     if (!f) {
-        printf("ERROR: unable to open %s for reading.", filename);
+        printf("ERROR: unable to open %s for reading\n", filename);
         return false;
     }
     
@@ -115,9 +117,13 @@ bool apply_patch(char *filename, list<struct change_t> *li) {
 }
 
 int main(int argc, char *argv[]) {
-    char *exepath = "..\\PES2021.exe";
+    char *exepath = "..\\..\\PES2021.exe";
     if (argc > 1) {
         exepath = strdup(argv[1]);
+        if (strlen(exepath) >= 4 && strcmp(exepath + strlen(exepath)-4, "help") == 0) {
+            printf("Usage: %s [exefile]\n", argv[0]);
+            return 0;
+        }
     }
     printf("INFO: exepath: %s\n", exepath);
 
