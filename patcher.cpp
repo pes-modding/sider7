@@ -99,8 +99,26 @@ bool apply_patch(char *filename, list<struct change_t> *li) {
 
     // step two: apply patch
     if (already_patched) {
-        printf("INFO: file %s is already patched. No changes made.\n", filename);
-        fclose(f);
+        printf("INFO: file %s is already patched. Do you want to unpatch? (y/N): ", filename);
+        char answer[64];
+        memset(answer, 0, sizeof(answer));
+        fgets(answer, sizeof(answer), stdin);
+        if (answer[0] == 'Y' || answer[0] == 'y') {
+            for (it = li->begin(); it != li->end(); it++) {
+                fseek(f, it->offset, SEEK_SET);
+                if (fwrite(&it->old_val, 1, 1, f) != 1) {
+                    printf("ERROR: unable to write byte at offset %llu\n", it->offset);
+                    fclose(f);
+                    return false;
+                }
+            }
+            printf("INFO: file %s was successfully unpatched. %u bytes changed\n", filename, li->size());
+            fclose(f);
+        }
+        else {
+            fclose(f);
+            printf("INFO: No changes made.\n");
+        }
         return true;
     }
     for (it = li->begin(); it != li->end(); it++) {
