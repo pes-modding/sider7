@@ -2,6 +2,13 @@ Sider 7 Release History
 =======================
 
 
+February 12, 2023
+v7.1.6
+- "ctx.kits" updates: new "SleeveLimits" kit attribute and corrections for number
+  positioning on the shorts (new range for "ShortsNumberX" and "ShortNumberY": 0-31)
+- new scripting lib: "fs", with function "find_files" for listing/searching directories
+
+
 June 15, 2021
 v7.1.4
 - fix for "home_team" and "edit_home_team" settings in lua context object

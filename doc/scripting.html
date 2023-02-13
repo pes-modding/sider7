@@ -51,6 +51,7 @@ table.inputs tr td.right,th.right { border-right: 1px solid #888; }
 <li><a href="#env">Module environment</a></li>
 <li><a href="#input">Input library</a></li>
 <li><a href="#memory">Memory library</a></li>
+<li><a href="#fs">File system library (fs)</a></li>
 <li><a href="#zlib">Zlib library</a></li>
 <li><a href="#audio">Audio library</a></li>
 <li><a href="#match">Match library</a></li>
@@ -943,7 +944,7 @@ string, math, unpack, type, error, io, os, _VERSION, _G</span>
 </p>
 <p>
 sider adds:<br />
-<span class="func">log, memory, zlib, audio, match, input, _FILE</span>
+<span class="func">log, memory, fs, zlib, audio, match, input, _FILE</span>
 </p>
 
 <p>You can also enable <span class="func">ffi</span> and <span class="func">bit</span> modules, which are LuaJIT
@@ -1163,10 +1164,63 @@ Returns 2 values:
 </ol>
 </p>
 
+<a class="top" href="#">Top</a>
+<a name="fs">
+<h3>9. File system library (fs)</h3>
+</a>
+
+<p>The "fs" library provides utility functions that are
+unavailable in standard Lua, but are useful when dealing with files and directories.</p>
+
+<p class="func">
+fs.find_files(pattern)
+</p>
+
+<p class="desc">Searches for files that match the given wildcard pattern.<br />
+Return value: An iterator object that yields a pair of strings on each iteration: a filename and a file type,
+which can be either <b>file</b> or <b>dir</b>.</li>
+</p>
+
+<p>For example, to list all entries - both files and directories in a given dir:
+<pre>
+for name, ftype in fs.find_files(ctx.sider_dir .. "modules") do
+    if name ~= "." and name ~= ".." then
+        log("Found: " .. name .. "(" .. ftype .. ")")
+    end
+end
+</pre>
+</p>
+
+<p>To recursivelly walk a directory structure, with all subdirectories:
+<pre>
+-- fsdemo.lua
+-- Demonstrates usage of fs.find_files function
+
+local m = {}
+
+local function walk(path)
+    for name, ftype in fs.find_files(path .. "\\*") do
+        if name ~= "." and name ~= ".." then
+            log(string.format("Found: %s\\%s (%s)", path, name, ftype))
+            if ftype == "dir" then
+                walk(path .. "\\" .. name)
+            end
+        end
+    end
+end
+
+function m.init(ctx)
+    -- list every file and every dir in BallServer content folder
+    walk(ctx.sider_dir .. "content\\ball-server")
+end
+
+return m
+</pre>
+</p>
 
 <a class="top" href="#">Top</a>
 <a name="zlib">
-<h3>9. Zlib library</h3>
+<h3>10. Zlib library</h3>
 </a>
 
 <p>This library contains a small set of utility functons to work with
@@ -1239,7 +1293,7 @@ if the input is not in WESYS-format, or <span class="file">nil</span>, if some e
 
 <a class="top" href="#">Top</a>
 <a name="audio">
-<h3>10. Audio library</h3>
+<h3>11. Audio library</h3>
 </a>
 
 <p>This library provides support for playing music and sound effects, which exist completely
@@ -1323,6 +1377,19 @@ return m
 <p class="func"><i>obj</i>:get_filename()</p>
 
 <p class="desc">Returns the full filename of the sound file that was given when the sound object was created</p>
+
+<p class="func"><i>obj</i>:get_state()</p>
+
+<p class="desc">Returns the string description of the current state of the sound object. Possible values are:
+<ul>
+    <li>created</li>
+    <li>playing</li>
+    <li>fading</li>
+    <li>pausing</li>
+    <li>paused</li>
+    <li>finished</li>
+</ul>
+</p>
 
 <p class="func"><i>obj</i>:pause()</p>
 
@@ -1519,6 +1586,66 @@ return m
 </pre>
 </p>
 
+<p>Example of using "get_state" method, with overlay showing
+the information on the currently playing sound: its filename, volume, and state</p>
+
+<p><b>Example: audio5.lua</b>:
+<pre>
+local m = {}
+
+local sound
+local volume
+
+local function pause_sound()
+    if sound then
+        -- remember volume of this sound, so that we can resume playback later at the same volume
+        volume = sound:get_volume()
+        -- pause with 2.5 second fade-out
+        sound:fade_to(0, 2.5)
+        sound:pause()
+    end
+end
+
+local function resume_sound()
+    if sound then
+        -- resume play with 2.5 second fade-in
+        sound:fade_to(volume, 2.5)
+        sound:play()
+    end
+end
+
+function m.key_up(ctx, vkey)
+    if vkey == 0x35 then
+        if sound == nil or sound:get_state() == "finished" then
+            -- not playing: Let's start a new sound
+            sound = audio.new(ctx.sider_dir .. "content\\audio-demo\\uefa.mp3")
+            sound:set_volume(0.7)
+            sound:play()
+        elseif sound:get_state() == "playing" then
+            pause_sound()
+        elseif sound:get_state() == "paused" then
+            resume_sound()
+        end
+    end
+end
+
+function m.overlay_on(ctx)
+    if sound ~= nil then
+        return string.format("sound %s (volume: %0.2f): %s", sound:get_filename(), sound:get_volume(), sound:get_state())
+    else
+        return "no sound. Press [5] - to play/pause"
+    end
+end
+
+function m.init(ctx)
+    ctx.register("key_up", m.key_up)
+    ctx.register("overlay_on", m.overlay_on)
+end
+
+return m
+</pre>
+</p>
+
 <p><img src="cr7.jpg" style="float: left; padding: 0 1em 1em 0;" height="150" />
 One last example is a sort of a fun one. It plays Cristiano Ronaldo's "suuu!" shout, when he scores a goal <b>AND does
 his special "windmill" celebration with high jump and full turn around.</b> The sound effect is triggered, when the
@@ -1567,7 +1694,7 @@ return m
 
 <a class="top" href="#">Top</a>
 <a name="match">
-<h3>11. Match library</h3>
+<h3>12. Match library</h3>
 </a>
 
 <p>This is a library that allows you query for some statistics about the
