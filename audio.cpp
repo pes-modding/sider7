@@ -356,6 +356,37 @@ static int audio_lua_get_filename(lua_State *L)
     return 1;
 }
 
+static int audio_lua_get_state(lua_State *L)
+{
+    lock_t lock(&_cs);
+    sound_t* sound = checksound(L);
+    lua_pop(L, lua_gettop(L));
+    if (sound->fading) {
+        lua_pushstring(L, "fading");
+        return 1;
+    }
+    switch (sound->state) {
+        case Audio::created:
+            lua_pushstring(L, "created");
+            break;
+        case Audio::playing:
+            lua_pushstring(L, "playing");
+            break;
+        case Audio::pausing:
+            lua_pushstring(L, "pausing");
+            break;
+        case Audio::paused:
+            lua_pushstring(L, "paused");
+            break;
+        case Audio::finished:
+            lua_pushstring(L, "finished");
+            break;
+        default:
+            lua_pushstring(L, "unknown");
+    }
+    return 1;
+}
+
 static int audio_lua_fade_to(lua_State *L)
 {
     lock_t lock(&_cs);
@@ -525,6 +556,7 @@ static const struct luaL_Reg audiolib_m [] = {
     {"set_volume", audio_lua_set_volume},
     {"get_volume", audio_lua_get_volume},
     {"get_filename", audio_lua_get_filename},
+    {"get_state", audio_lua_get_state},
     {"fade_to", audio_lua_fade_to},
     {"when_done", audio_lua_when_done},
     {NULL, NULL}
