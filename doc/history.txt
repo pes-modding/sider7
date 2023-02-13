@@ -6,7 +6,9 @@ February 12, 2023
 v7.1.6
 - "ctx.kits" updates: new "SleeveLimits" kit attribute and corrections for number
   positioning on the shorts (new range for "ShortsNumberX" and "ShortNumberY": 0-31)
+  Thanks, zlac and Hawke!
 - new scripting lib: "fs", with function "find_files" for listing/searching directories
+- audio lib update: new function "get_state" for sound objects
 
 
 June 15, 2021
