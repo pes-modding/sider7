@@ -2,6 +2,15 @@ Sider 7 Release History
 =======================
 
 
+February 20, 2023
+v7.2.1
+- "ctx.kits" updates: new "SleeveLimits" kit attribute and corrections for number
+  positioning on the shorts (new range for "ShortsNumberX" and "ShortsNumberY": 0-31)
+  Thanks, zlac and Hawke!
+- new scripting lib: "fs", with function "find_files" for listing/searching directories
+- audio lib update: new function "get_state" for sound objects
+
+
 July 9, 2022
 v7.2.0
 - special version with modified game-attachment logic 

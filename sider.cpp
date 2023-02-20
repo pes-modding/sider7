@@ -18,6 +18,7 @@
 #include "common.h"
 #include "patterns.h"
 #include "memlib.h"
+#include "fslib.h"
 #include "kmp.h"
 #include "libz.h"
 #include "kitinfo.h"
@@ -70,6 +71,7 @@ CRITICAL_SECTION _tcs;
 lua_State *L = NULL;
 
 int _memory_lib_index = 0;
+int _fs_lib_index = 0;
 int _audio_lib_index = 0;
 
 struct FILE_HANDLE_INFO {
@@ -6012,6 +6014,10 @@ static void push_env_table(lua_State *L, module_t *m)
     lua_pushvalue(L, _memory_lib_index);
     lua_setfield(L, -2, "memory");
 
+    // fs lib
+    lua_pushvalue(L, _fs_lib_index);
+    lua_setfield(L, -2, "fs");
+
     // audio lib
     lua_pushvalue(L, _audio_lib_index);
     lua_setfield(L, -2, "audio");
@@ -6110,6 +6116,10 @@ void init_lua_support()
         // memory library
         init_memlib(L);
         _memory_lib_index = lua_gettop(L);
+
+        // memory library
+        init_fslib(L);
+        _fs_lib_index = lua_gettop(L);
 
         // audio library
         init_audio_lib(L);
