@@ -4671,7 +4671,7 @@ void sider_set_team_id(DWORD *dest, TEAM_INFO_STRUCT *team_info, DWORD offset)
 void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
 {
     MATCH_INFO_STRUCT *mi = (MATCH_INFO_STRUCT*)((BYTE*)dest_ss - 0x70);
-    bool ok = mi && (mi->num_subs >= 0 && mi->num_subs <=6 ) && (mi->db0x17 == 0x17 || mi->db0x17 == 0x12 || mi->db0x17 == 0x15);
+    bool ok = mi && (mi->num_subs >= 0 && mi->num_subs <= 11) && (mi->db0x17 >= 0x10 && mi->db0x17 < 0x20);
     if (!ok) {
         // safety check
         DBG(16) logu_("%02x %02x %02x\n", mi->num_subs, mi->num_subs_et, mi->db0x17);
