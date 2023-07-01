@@ -7,6 +7,8 @@ v7.1.7
 - fixing a rare bug, when "after_set_conditions" event isn't called in Master League
   (which led to subtle errors in such modules as StadiumServer and ScoreboardServer)
   thanks to Sickbeard who reported it.
+- documentation updated: added previously missing info on:
+  "set_home_team_for_kits" and "set_away_team_for_kits" events
 
 
 February 12, 2023
