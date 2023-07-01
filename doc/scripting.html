@@ -536,6 +536,26 @@ containing the changed attributes. (For more information on this, consult
 the "Kitserver 2020" thread on EvoWeb forums)</p>
 
 <p class="evthdr">
+Event name: <span class="evt">"set_home_team_for_kits"</span><br />
+Handler function: <span class="func">f(ctx, team_id, is_edit_mode)</span><br />
+Return value expected: <span class="file">nil</span>.
+</p>
+
+<p>This event fires when a home team is selected for loading of kits which happens soon after.
+The 3rd parameter (boolean) indicates whether we are in Edit Mode or not.</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"set_away_team_for_kits"</span><br />
+Handler function: <span class="func">f(ctx, team_id, is_edit_mode)</span><br />
+Return value expected: <span class="file">nil</span>.
+</p>
+
+<p>This event fires when an away team is selected for loading of kits which happens soon after.
+The 3rd parameter (boolean) indicates whether we are in Edit Mode or not.<br/>
+(NOTE: the "is_edit_mode" is always false for this function, as there is always only a "Home" team
+in Edit Mode.)</p>
+
+<p class="evthdr">
 Event name: <span class="evt">"set_match_time"</span><br />
 Handler function: <span class="func">f(ctx, minutes)</span><br />
 Return value expected: <span class="file">nil</span> or <span class="file">integer</span>

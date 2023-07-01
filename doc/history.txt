@@ -2,6 +2,13 @@ Sider 7 Release History
 =======================
 
 
+June 30, 2023
+v7.1.7
+- fixing a rare bug, when "after_set_conditions" event isn't called in Master League
+  (which led to subtle errors in such modules as StadiumServer and ScoreboardServer)
+  thanks to Sickbeard who reported it.
+
+
 February 12, 2023
 v7.1.6
 - "ctx.kits" updates: new "SleeveLimits" kit attribute and corrections for number
