@@ -2,8 +2,22 @@ Sider 7 Release History
 =======================
 
 
-February 20, 2023
+March 27, 2024
 v7.2.1
+- update for special version with modified game-attachment logic
+
+
+June 30, 2023
+v7.1.7
+- fixing a rare bug, when "after_set_conditions" event isn't called in Master League
+  (which led to subtle errors in such modules as StadiumServer and ScoreboardServer)
+  thanks to Sickbeard who reported it.
+- documentation updated: added previously missing info on:
+  "set_home_team_for_kits" and "set_away_team_for_kits" events
+
+
+February 12, 2023
+v7.1.6
 - "ctx.kits" updates: new "SleeveLimits" kit attribute and corrections for number
   positioning on the shorts (new range for "ShortsNumberX" and "ShortsNumberY": 0-31)
   Thanks, zlac and Hawke!
