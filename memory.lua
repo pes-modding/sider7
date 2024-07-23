@@ -6,7 +6,6 @@ local C = ffi.C
 
 ffi.cdef [[
 bool VirtualProtect(void *p, size_t len, uint32_t newprot, uint32_t *oldprot);
-bool VirtualProtect(void *p, size_t len, uint32_t newprot, uint32_t *oldprot);
 int memcmp(void *dst, void *src, size_t len);
 int wsprintfA(char *dst, char *fmt, ...);
 
@@ -120,6 +119,7 @@ typedef struct _MEMORY_BASIC_INFORMATION {
   DWORD  Type;
 } MEMORY_BASIC_INFORMATION, *PMEMORY_BASIC_INFORMATION;
 
+DWORD GetLastError();
 BOOL GlobalMemoryStatusEx(LPMEMORYSTATUSEX lpBuffer);
 void GetSystemInfo(LPSYSTEM_INFO lpSystemInfo);
 SIZE_T VirtualQuery(
@@ -202,8 +202,9 @@ function m.write(addr, s)
     local oldprot = ffi.new('uint32_t[1]',{});
     local len = #s
     if not C.VirtualProtect(p, len, PAGE_EXECUTE_READWRITE, oldprot) then
-        return error(string.format('VirtualProtect failed for %s - %s memory range',
-            m.hex(p), m.hex(p+len)))
+        error_code = C.GetLastError()
+        return error(string.format('VirtualProtect failed for %s - %s memory range (error code: %s)',
+            m.hex(p), m.hex(p+len), m.hex(error_code)))
     end
     ffi.copy(p, s, len)
 end
