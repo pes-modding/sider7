@@ -41,7 +41,7 @@ static int libz_compress(lua_State *L)
         return 2;
     }
 
-    int retval = compress(dest, &dest_len, (const Bytef*)data, len);
+    int retval = compress2(dest, &dest_len, (const Bytef*)data, len, Z_BEST_COMPRESSION);
     if (retval != Z_OK) {
         lua_pop(L, 1);
         lua_pushnil(L);
@@ -189,7 +189,7 @@ static int libz_pack(lua_State *L)
     memcpy(pack->header.magic, magic, 3);
     memcpy(pack->header.wesys, "WESYS", 5);
 
-    int retval = compress((Bytef*)&pack->data, &dest_len, (const Bytef*)data, len);
+    int retval = compress2((Bytef*)&pack->data, &dest_len, (const Bytef*)data, len, Z_BEST_COMPRESSION);
     if (retval != Z_OK) {
         lua_pop(L, lua_gettop(L));
         lua_pushnil(L);
