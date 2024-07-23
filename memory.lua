@@ -201,10 +201,15 @@ function m.write(addr, s)
     local p = ffi.cast('char*', addr)
     local oldprot = ffi.new('uint32_t[1]',{});
     local len = #s
-    if not C.VirtualProtect(p, len, PAGE_EXECUTE_READWRITE, oldprot) then
-        error_code = C.GetLastError()
-        return error(string.format('VirtualProtect failed for %s - %s memory range (error code: %s)',
-            m.hex(p), m.hex(p+len), m.hex(error_code)))
+    local left = len
+    for i=1,#s,16 do
+        local sz = math.min(16, left)
+        if not C.VirtualProtect(p+i-1, sz, PAGE_EXECUTE_READWRITE, oldprot) then
+            local error_code = C.GetLastError()
+            return error(string.format('VirtualProtect failed for %s - %s memory range (error code: %s)',
+                m.hex(p+i-1), m.hex(p+i-1+sz-1), m.hex(error_code)))
+        end
+        left = left - sz
     end
     ffi.copy(p, s, len)
 end
