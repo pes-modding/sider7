@@ -1619,6 +1619,7 @@ struct module_t {
     int evt_gamepad_input;
     int evt_show;
     int evt_hide;
+    int evt_context_reset;
 };
 vector<module_t*> _modules;
 module_t* _curr_m;
@@ -2351,6 +2352,23 @@ void module_after_set_conditions(module_t *m)
         if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
             logu_("[%d] lua ERROR from module_after_set_conditions: %s\n", GetCurrentThreadId(), err);
+            lua_pop(L, 1);
+        }
+        LeaveCriticalSection(&_cs);
+    }
+}
+
+void module_context_reset(module_t *m)
+{
+    if (m->evt_context_reset != 0) {
+        EnterCriticalSection(&_cs);
+        lua_pushvalue(m->L, m->evt_context_reset);
+        lua_xmove(m->L, L, 1);
+        // push params
+        lua_pushvalue(L, 1); // ctx
+        if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+            const char *err = luaL_checkstring(L, -1);
+            logu_("[%d] lua ERROR from module_context_reset: %s\n", GetCurrentThreadId(), err);
             lua_pop(L, 1);
         }
         LeaveCriticalSection(&_cs);
@@ -4868,6 +4886,14 @@ void sider_context_reset()
     _away_team_info = NULL;
 
     logu_("context reset\n");
+
+    if (_config->_lua_enabled) {
+        // lua callbacks
+        vector<module_t*>::iterator i;
+        for (i = _modules.begin(); i != _modules.end(); i++) {
+            module_context_reset(*i);
+        }
+    }
 }
 
 void sider_free_select(BYTE *controller_restriction)
@@ -5887,6 +5913,12 @@ static int sider_context_register(lua_State *L)
         lua_pushvalue(L, -1);
         lua_xmove(L, _curr_m->L, 1);
         _curr_m->evt_after_set_conditions = lua_gettop(_curr_m->L);
+        logu_("Registered for \"%s\" event\n", event_key);
+    }
+    else if (strcmp(event_key, "context_reset")==0) {
+        lua_pushvalue(L, -1);
+        lua_xmove(L, _curr_m->L, 1);
+        _curr_m->evt_context_reset = lua_gettop(_curr_m->L);
         logu_("Registered for \"%s\" event\n", event_key);
     }
     /*

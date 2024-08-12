@@ -39,7 +39,7 @@ table.inputs tr td.right,th.right { border-right: 1px solid #888; }
 
 <body>
 <h1>Sider 7 Lua Module Programmers Guide</h1>
-<h4>For sider.dll version: 7.1</h4>
+<h4>For sider.dll version: 7.3</h4>
 
 <p>
 <ol>
@@ -690,6 +690,16 @@ Return value expected: <span class="file">nil</span>
 <p>This event fires after "set_conditions". It doesn't allow the handler
 to change anything, but it does provide the context object so that the
 modules can react in whatever way they want.</p>
+
+<p class="evthdr">
+Event name: <span class="evt">"context_reset"</span> (since 7.3.0)<br />
+Handler function: <span class="func">f(ctx)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
+
+<p>This event fires when the sider context is reset. Typically, it happens
+when the game goes back to the Main Menu, but also in some situations in
+Edit Mode, when new team is selected.</p>
 
 <p class="evthdr">
 Event name: <span class="evt">"get_ball_name"</span><br />
