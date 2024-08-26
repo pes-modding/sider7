@@ -57,6 +57,7 @@ imageutil.obj: imageutil.cpp imageutil.h
 version.obj: version.cpp
 libz.obj: libz.cpp libz.h common.h
 kitinfo.obj: kitinfo.cpp kitinfo.h
+regs.obj: regs.cpp regs.h
 
 memlib.obj: memlib.h memlib_lua.h memlib.cpp
 memlib_lua.h: memory.lua makememlibhdr.exe
@@ -98,9 +99,9 @@ pshader.h: pshader.hlsl
 ptexshader.h: ptexshader.hlsl
 	fxc /E siderTexPS /Ges /T ps_4_0 /Fh ptexshader.h ptexshader.hlsl
 
-sider.obj: sider.cpp sider.h patterns.h common.h config.h audio.h imageutil.h vshader.h vtexshader.h pshader.h ptexshader.h libz.h kitinfo.h utf8.h
-sider.dll: sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj fslib.obj libz.obj audio.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj sider.res $(LUALIBPATH)\$(LUALIB) $(FW1LIBPATH)\$(FW1LIB) $(LPZLIB)\$(ZLIBLIB)
-	$(LINK) $(LFLAGS) /out:sider.dll /DLL sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj fslib.obj libz.obj audio.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj sider.res $(ZLIBLIB) /LIBPATH:$(LUALIBPATH) /LIBPATH:$(FW1LIBPATH) $(LIBS) $(LUALIB) $(FW1LIB) /LIBPATH:$(LPZLIB) /LIBPATH:"$(LIB)"
+sider.obj: sider.cpp sider.h patterns.h common.h config.h audio.h imageutil.h vshader.h vtexshader.h pshader.h ptexshader.h libz.h kitinfo.h utf8.h regs.h
+sider.dll: sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj fslib.obj libz.obj audio.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj regs.obj sider.res $(LUALIBPATH)\$(LUALIB) $(FW1LIBPATH)\$(FW1LIB) $(LPZLIB)\$(ZLIBLIB)
+	$(LINK) $(LFLAGS) /out:sider.dll /DLL sider.obj util.obj imageutil.obj version.obj common.obj kmp.obj memlib.obj fslib.obj libz.obj audio.obj kitinfo.obj DDSTextureLoader.obj WICTextureLoader.obj regs.obj sider.res $(ZLIBLIB) /LIBPATH:$(LUALIBPATH) /LIBPATH:$(FW1LIBPATH) $(LIBS) $(LUALIB) $(FW1LIB) /LIBPATH:$(LPZLIB) /LIBPATH:"$(LIB)"
 
 sider.exe: main.obj sider.dll sider_main.res
 	$(LINK) $(LFLAGS) /out:sider.exe main.obj sider_main.res $(LIBS) sider.lib /LIBPATH:"$(LIB)"

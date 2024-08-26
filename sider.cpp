@@ -23,6 +23,7 @@
 #include "libz.h"
 #include "kitinfo.h"
 #include "audio.h"
+#include "regs.h"
 
 #define XINPUT_USE_9_1_0
 #define DIRECTINPUT_VERSION 0x0800
@@ -757,6 +758,10 @@ extern "C" void sider_clear_sc_hk();
 extern "C" void sider_set_edit_team_id_hk();
 
 extern "C" void sider_set_edit_team_id(DWORD team_id_encoded);
+
+extern "C" void sider_custom_event_hk();
+
+extern "C" void sider_custom_event(uint16_t param, REGISTERS *regs);
 
 static DWORD dwThreadId;
 static DWORD hookingThreadId = 0;
@@ -1620,6 +1625,7 @@ struct module_t {
     int evt_show;
     int evt_hide;
     int evt_context_reset;
+    int evt_custom;
 };
 vector<module_t*> _modules;
 module_t* _curr_m;
@@ -2373,6 +2379,41 @@ void module_context_reset(module_t *m)
         }
         LeaveCriticalSection(&_cs);
     }
+}
+
+bool module_custom_event(module_t *m, uint16_t param, REGISTERS *regs)
+{
+    bool processed = false;
+    if (m->evt_custom != 0) {
+        EnterCriticalSection(&_cs);
+        log_(L"module_custom_event for: %s\n", m->filename->c_str());
+        lua_pushvalue(m->L, m->evt_custom);
+        lua_xmove(m->L, L, 1);
+        // push params
+        lua_pushvalue(L, 1); // ctx
+        lua_pushinteger(L, param);
+        lua_newtable(L); // registers
+        log_(L"regs: %p\n", regs);
+        registers_to_lua_table(L, -1, regs);
+        log_(L"module_custom_event: registers copied to table\n");
+
+        if (lua_pcall(L, 3, 2, 0) != LUA_OK) {
+            const char *err = luaL_checkstring(L, -1);
+            logu_("[%d] lua ERROR from module_custom_event: %s\n", GetCurrentThreadId(), err);
+            lua_pop(L, 1);
+            LeaveCriticalSection(&_cs);
+            return false;
+        }
+        log_(L"module_custom_event: lua_pcall returned\n");
+        processed = lua_toboolean(L, -2);
+        if (lua_istable(L, -1)) {
+            // registers
+            registers_from_lua_table(L, -1, regs);
+        }
+        lua_pop(L,2);
+        LeaveCriticalSection(&_cs);
+    }
+    return processed;
 }
 
 void module_set_teams(module_t *m, DWORD home, DWORD away) //, TEAM_INFO_STRUCT *home_team_info, TEAM_INFO_STRUCT *away_team_info)
@@ -4896,6 +4937,19 @@ void sider_context_reset()
     }
 }
 
+void sider_custom_event(uint16_t param, REGISTERS *regs) {
+    if (_config->_lua_enabled) {
+        // lua callbacks
+        vector<module_t*>::iterator i;
+        for (i = _modules.begin(); i != _modules.end(); i++) {
+            bool processed = module_custom_event(*i, param, regs);
+            if (processed) {
+                break;
+            }
+        }
+    }
+}
+
 void sider_free_select(BYTE *controller_restriction)
 {
     *controller_restriction = 0;
@@ -5921,6 +5975,12 @@ static int sider_context_register(lua_State *L)
         _curr_m->evt_context_reset = lua_gettop(_curr_m->L);
         logu_("Registered for \"%s\" event\n", event_key);
     }
+    else if (strcmp(event_key, "custom_event")==0) {
+        lua_pushvalue(L, -1);
+        lua_xmove(L, _curr_m->L, 1);
+        _curr_m->evt_custom = lua_gettop(_curr_m->L);
+        logu_("Registered for \"%s\" event\n", event_key);
+    }
     /*
     else if (strcmp(event_key, "set_stadium_for_replay")==0) {
         lua_pushvalue(L, -1);
@@ -6035,6 +6095,9 @@ static void push_context_table(lua_State *L)
 
     lua_pushcfunction(L, sider_context_register);
     lua_setfield(L, -2, "register");
+
+    lua_pushlightuserdata(L, (void*)sider_custom_event_hk);
+    lua_setfield(L, -2, "cevt");
 
     // ctx.kits
     lua_newtable(L);
@@ -7150,6 +7213,7 @@ bool hook_if_all_found() {
             log_(L"sider_check_kit_choice: %p\n", sider_check_kit_choice_hk);
             log_(L"sider_data_ready: %p\n", sider_data_ready_hk);
             log_(L"call_to_move at: %p\n", _config->_hp_at_call_to_move);
+            log_(L"sider_custom_event_hk: %p\n", sider_custom_event_hk);
 
             if (_config->_hp_at_set_team_id) {
                 BYTE *check_addr = _config->_hp_at_set_team_id - offs_set_team_id + offs_check_set_team_id;
