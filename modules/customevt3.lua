@@ -59,12 +59,11 @@ function m.init(ctx)
 
     -- place event trigger right there, overwriting existing code
     memory.write(addr,
-        "\x53" ..                                                   -- push rbx
         "\x51" ..                                                   -- push rcx
-        "\x48\xbb" .. memory.pack("u64", ctx.custom_evt_rbx) ..     -- mov rbx, <sider_custom_event_rbx_hk>
         "\x66\xb9" .. memory.pack("u16", my_event_id) ..            -- mov cx, <event_id>
-        "\xff\xd3" ..                                               -- call rbx
-        "\x48\x83\xc4\x10" ..                                       -- add rsp,10h
+        "\xeb\x08" .. memory.pack("u64", ctx.custom_evt) ..         -- jmp <8-bytes-over> ;followed by addr
+        "\xff\x15\xf2\xff\xff\xff" ..                               -- call qword ptr [rip-8]
+        "\x48\x83\xc4\x08" ..                                       -- add rsp,8
         "\xc3"                                                      -- ret
     )
 

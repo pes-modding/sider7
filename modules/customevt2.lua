@@ -60,23 +60,20 @@ function m.init(ctx)
     -- put event trigger into codecave
     local codecave = memory.allocate_codecave(64)
     memory.write(codecave,
-        "\x53" ..                                         -- push rbx
-        "\x51" ..                                         -- push rcx
-        "\x48\xbb" .. memory.pack("u64", ctx.cevt) ..     -- mov rbx, <sider_custom_event_hk>
-        "\x66\xb9" .. memory.pack("u16", my_event_id) ..  -- mov cx, <event_id>
-        "\xff\xd3" ..                                     -- call rbx
-        "\x48\x83\xc4\x10" ..                             -- add rsp,10h
-        "\xc3"                                            -- ret
+        "\x53" ..                                                -- push rbx
+        "\x51" ..                                                -- push rcx
+        "\x48\xbb" .. memory.pack("u64", ctx.custom_evt_rbx) ..  -- mov rbx, <sider_custom_event_hk>
+        "\x66\xb9" .. memory.pack("u16", my_event_id) ..         -- mov cx, <event_id>
+        "\xff\xd3" ..                                            -- call rbx
+        "\x48\x83\xc4\x10" ..                                    -- add rsp,10h
+        "\xc3"                                                   -- ret
     )
 
     -- connect event trigger with place in the game code
-    -- 1. put the 8-byte codecave addr nearby (there is space)
-    -- 2. put an indirect jump instruction using that addr
-    local offset = 0x25
-    memory.write(addr + 6 + offset, memory.pack("u64", codecave))
-    memory.write(addr,
-        "\xff\x25" .. memory.pack("u32", offset)          -- jmp qword ptr [<codecave_addr>]
-    )
+    -- 1. put an indirect jump instruction using that addr that just folllows
+    -- 2. put the 8-byte codecave addr right after
+    memory.write(addr, "\xff\x25\x00\x00\x00\x00")
+    memory.write(addr + 6, memory.pack("u64", codecave))
 
     -- register for custom events
     ctx.register("custom_event", m.custom_event)

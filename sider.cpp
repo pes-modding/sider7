@@ -759,6 +759,8 @@ extern "C" void sider_set_edit_team_id_hk();
 
 extern "C" void sider_set_edit_team_id(DWORD team_id_encoded);
 
+extern "C" void sider_custom_event_rbx_hk();
+
 extern "C" void sider_custom_event_hk();
 
 extern "C" void sider_custom_event(uint16_t param, REGISTERS *regs);
@@ -6096,8 +6098,11 @@ static void push_context_table(lua_State *L)
     lua_pushcfunction(L, sider_context_register);
     lua_setfield(L, -2, "register");
 
+    lua_pushlightuserdata(L, (void*)sider_custom_event_rbx_hk);
+    lua_setfield(L, -2, "custom_evt_rbx");
+
     lua_pushlightuserdata(L, (void*)sider_custom_event_hk);
-    lua_setfield(L, -2, "cevt");
+    lua_setfield(L, -2, "custom_evt");
 
     // ctx.kits
     lua_newtable(L);
