@@ -21,6 +21,8 @@ typedef uint64_t DWORDLONG;
 typedef size_t SIZE_T;
 typedef bool BOOL;
 
+BYTE* VirtualAlloc(LPVOID lpAddress, SIZE_T dwSize, DWORD  flAllocationType, DWORD  flProtect);
+
 typedef struct _IMAGE_DOS_HEADER
 {
      WORD e_magic;
@@ -212,6 +214,17 @@ function m.write(addr, s)
         left = left - sz
     end
     ffi.copy(p, s, len)
+end
+
+function m.allocate_codecave(len_bytes)
+    local allocationFlags = 0x1000 + 0x2000
+    local protection_execute_readwrite = 0x40
+    local addr = C.VirtualAlloc(nil, len_bytes, allocationFlags, protection_execute_readwrite)
+    if not addr then
+        local error_code = C.GetLastError()
+        return error(string.format('VirtualAlloc failed (error code: %s)', m.hex(error_code)))
+    end
+    return addr
 end
 
 local format_sizes = {
