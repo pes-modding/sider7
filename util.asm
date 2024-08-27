@@ -777,7 +777,7 @@ restore_registers:
 sider_custom_event_rbx_hk endp
 
 ; Generic custom event trigger
-; Expects one parameter: origin rcx value on the stack
+; Expects one parameter: original rcx value on the stack
 sider_custom_event_hk proc
 
         push    rsp
