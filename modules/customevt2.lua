@@ -57,12 +57,17 @@ function m.init(ctx)
     addr = addr - 0x57 + 0x4a
     log("code location: " .. memory.hex(addr))
 
+    -- check if custom event trigger is supported
+    if not ctx.custom_evt_rbx then
+        error("custom events are not supported. Upgrade your sider")
+    end
+
     -- put event trigger into codecave
     local codecave = memory.allocate_codecave(64)
     memory.write(codecave,
         "\x53" ..                                                -- push rbx
         "\x51" ..                                                -- push rcx
-        "\x48\xbb" .. memory.pack("u64", ctx.custom_evt_rbx) ..  -- mov rbx, <sider_custom_event_hk>
+        "\x48\xbb" .. memory.pack("u64", ctx.custom_evt_rbx) ..  -- mov rbx, <sider_custom_event_rbx_hk>
         "\x66\xb9" .. memory.pack("u16", my_event_id) ..         -- mov cx, <event_id>
         "\xff\xd3" ..                                            -- call rbx
         "\x48\x83\xc4\x10" ..                                    -- add rsp,10h

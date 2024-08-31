@@ -761,8 +761,6 @@ extern "C" void sider_set_edit_team_id(DWORD team_id_encoded);
 
 extern "C" void sider_custom_event_rbx_hk();
 
-extern "C" void sider_custom_event_hk();
-
 extern "C" void sider_custom_event(uint16_t param, REGISTERS *regs);
 
 static DWORD dwThreadId;
@@ -6101,9 +6099,6 @@ static void push_context_table(lua_State *L)
     lua_pushlightuserdata(L, (void*)sider_custom_event_rbx_hk);
     lua_setfield(L, -2, "custom_evt_rbx");
 
-    lua_pushlightuserdata(L, (void*)sider_custom_event_hk);
-    lua_setfield(L, -2, "custom_evt");
-
     // ctx.kits
     lua_newtable(L);
     lua_pushcfunction(L, sider_context_get_current_team_id);
@@ -7218,7 +7213,7 @@ bool hook_if_all_found() {
             log_(L"sider_check_kit_choice: %p\n", sider_check_kit_choice_hk);
             log_(L"sider_data_ready: %p\n", sider_data_ready_hk);
             log_(L"call_to_move at: %p\n", _config->_hp_at_call_to_move);
-            log_(L"sider_custom_event_hk: %p\n", sider_custom_event_hk);
+            log_(L"sider_custom_event_rbx_hk: %p\n", sider_custom_event_rbx_hk);
 
             if (_config->_hp_at_set_team_id) {
                 BYTE *check_addr = _config->_hp_at_set_team_id - offs_set_team_id + offs_check_set_team_id;

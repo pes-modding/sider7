@@ -57,6 +57,11 @@ function m.init(ctx)
     addr = addr - 0x57 + 0x4a
     log("code location: " .. memory.hex(addr))
 
+    -- check if custom event trigger is supported
+    if not ctx.custom_evt_rbx then
+        error("custom events are not supported. Upgrade your sider")
+    end
+
     -- place event trigger right there, overwriting existing code
     memory.write(addr,
         "\x53" ..                                                   -- push rbx
