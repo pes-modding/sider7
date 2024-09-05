@@ -64,6 +64,7 @@ function m.init(ctx)
 
     -- put event trigger into codecave
     local codecave = memory.allocate_codecave(64)
+    log("code cave allocated at: " .. memory.hex(codecave))
     memory.write(codecave,
         "\x53" ..                                                -- push rbx
         "\x51" ..                                                -- push rcx
