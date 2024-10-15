@@ -6677,6 +6677,7 @@ bool all_found(config_t *cfg);
 DWORD install_func(LPVOID thread_param) {
     log_(L"DLL attaching to (%s).\n", module_filename);
     log_(L"Mapped into PES.\n");
+    log_(L"sider dir: %s\n", sider_dir);
     logu_("UTF-8 check: ленинградское время ноль часов ноль минут.\n");
 
     _is_game = true;
@@ -7470,7 +7471,7 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
 
                 wstring version;
                 get_module_version(hDLL, version);
-                open_log_(L"============================\n");
+                start_log_(L"============================\n");
                 log_(L"Sider DLL: version %s\n", version.c_str());
                 log_(L"Filename match: %s\n", match->c_str());
                 if (is_already_loaded(hDLL)) {
