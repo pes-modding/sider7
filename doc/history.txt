@@ -2,6 +2,11 @@ Sider 7 Release History
 =======================
 
 
+March 27, 2024
+v7.2.1
+- update for special version with modified game-attachment logic
+
+
 June 30, 2023
 v7.1.7
 - fixing a rare bug, when "after_set_conditions" event isn't called in Master League
@@ -18,6 +23,13 @@ v7.1.6
   Thanks, zlac and Hawke!
 - new scripting lib: "fs", with function "find_files" for listing/searching directories
 - audio lib update: new function "get_state" for sound objects
+
+
+July 9, 2022
+v7.2.0
+- special version with modified game-attachment logic 
+  (no sider.exe. Game patcher program is included, with support of PES2021.exe versions 1.06.00 - 1.07.02)
+- tested successfully on Windows, Ubuntu Linux, and Steam Deck
 
 
 June 15, 2021

@@ -4,6 +4,7 @@
 <style>
 body { margin-left: 1em; margin-right: 1em; margin-bottom: 2em; }
 body,h1,h2,h3,h4,h5,p,ol,ul,li { font-family: sans-serif; }
+img { border: 1px solid #888; }
 h1 { margin-bottom: 0; }
 h4 { color: #660066; margin-top: 0.1em; margin-bottom: 0.1em; }
 h3 { color: #113399; text-decoration: underline; margin-top: 1.6em; }
@@ -25,7 +26,7 @@ a { color: #33f; }
 <!--<a href="sider.jpg"><img src="sider.jpg" width="100%"/></a>-->
 
 <h1>Sider 7 for Pro Evolution Soccer 2021</h1>
-<h4>version 7.1.7 from June 30, 2023</h4>
+<h4>version 7.2.1 from March 27, 2024</h4>
 <a href="history.txt">history.txt</a>
 
 <h3>INTRODUCTION</h3>
@@ -52,43 +53,37 @@ See <a href="scripting.html">scripting.html</a>
 
 <h3>HOW TO INSTALL</h3>
 
-<p>Move the folder that you just unpacked from the ZIP archive into a place, where your Windows user account has
-full permissions. I very <b>strongly recommend</b> to use one of these standard locations:
-Desktop, Documents, or your home directory.</p>
+<p>Now that you have already unpacked the sider zip archive, you will see the folder called <b>sider</b> inside.
+Move that folder inside the game directory, so that it looks like on these pictures:</p>
 
 <p>
-<a href="cap1.jpg"><img src="cap1.jpg" height="200"/></a>
-<a href="cap2.jpg"><img src="cap2.jpg" height="200"/></a>
-<a href="cap3.jpg"><img src="cap3.jpg" height="200"/></a>
+<a href="cap1.png"><img src="cap1.png" width="40%"/></a>
+<a href="cap2.png"><img src="cap2.png" width="40%"/></a>
 </p>
 
-<p>Starting with version 6.3, sider has no external dependences, meaning
-that everything that sider requires is included in its folder.
-You do not need to install any additional software to be able to run sider.
-You must have at least Windows 7 64-bit or newer (Sider will not work on XP/Vista).</p>
+<h4>Patching the game exe</h4>
 
-<div class="warn">
-<p>People sometimes take sider files and stuff them into Steam's directory
-for PES 2021. I am not entirely sure where that idea originated. One possibilty is a
-"carry-over knowledge" of how Kitserver worked for old-gen PES games. However, in the
-case of sider, this is not a good way to organize things. In fact, it is a pretty bad idea, because:
-<ol>
-<li>you mix sider files with game files, and it can be tricky to
-remember which files belong to sider and which ones - to the game. Uninstalling
-sider then becomes more difficult.</li>
-<li>sider needs to create sider.log file and create and update various *.cache and *.ini files. If it has
-trouble doing so, due to folder permissions, it can lead to errors and crashes.
-<li>Steam may need/choose to "verify" game files, which can result in some of the
-sider files being deleted or corrupted in some way.</li>
-</ol>
-So, in other words, don't do it. There is absolutely no need for it.</p>
-</div>
+<p>This is a step that needs to only be done once. (Or if game updates and new PES2021.exe is downloaded
+you will need to run it again</p>
+
+<p class="gwarn">You may want to make a copy of your PES2021.exe, just in case things go wrong, but even if you
+don't do that, it can typically be recovered (restored to its original state) by verifying your files in Steam</p>
+
+<p>The idea is that we need to "instruct" the game to load <b>sider.dll</b>, which is what contains
+Sider engine and enables all the functionality that sider provides. This is done by running a utility
+program called <b>patcher.exe</b>, which alters the game executable in a subtle way - basically making
+it load sider.dll right after the game window is created</p>
+
+<p>
+<a href="patcher.png"><img src="patcher.png" width="60%"/></a>
+</p>
 
 <h3>HOW TO UNINSTALL</h3>
 
-<p class="note">Before uninstalling, remember that you can always run the game <b>without</b> sider, for
-whatever reason. To do that, simply start the game via Steam or Steam desktop shortcut.
-(Like you normally would, if you didn't have sider)</p>
+<p class="note">Before uninstalling, remember that you can always temporarily disable sider by 
+renaming its directory, for example to <b>sider.disabled</b> or some other name like that.
+This way, when the game runs, it will not be able to load <b>sider.dll</b> and will continue
+without it</p>
 
 <p>If you want to completely remove sider from your computer, simply delete
 its folder, and that is it - uninstallation complete.</p>
@@ -96,64 +91,23 @@ its folder, and that is it - uninstallation complete.</p>
 
 <h3>HOW TO USE</h3>
 
-<p>Sider itself does not require Administrator privileges, you should
-run it under your regular account - the same one as you would use to
-start the game without Sider.</p>
-
-<h4>The new method (preferred)</h4>
-
-<p>The new <b>one-click</b> way is enabled by default now and it is super easy:
-just run <span class="file">sider.exe</span>, it will open a small window, then it will automatically
-launch the game itself, then Sider application will exit, but the game will
-continue running with the <span class="file">sider.dll</span> loaded into it.</p>
+<p>Just start the game as you normally would - via Steam UI, or a shortcut on desktop.
+(If you successfully patched your PES2021.exe using the <b>patcher</b> program, the
+game will load sider automatically)</p>
 
 <p class="gwarn">The very first time (or after Steam downloads a new, updated PES2021.exe), there will be a small delay
 between the launch of sider and the game starting - maybe 5-10 seconds, as sider needs to
 analyze the process and find hook places in memory. However, next time you do it, the game
 should start quickly (normally).</p>
 
-<h4>The old method</h4>
-<p>The "old" way is still supported too and if you prefer that, the
-sequence is the same as before. Make sure you comment out the
-"start.game" line in <span class="file">sider.ini</span>, and then:</p>
-<ol>
-<li>Run <span class="file">sider.exe</span>, it will open a small window, which you can
-minimize if you want, but do not close it.</li>
-<li>Run the game. Sider should automatically attach to the game process.</li>
-</ol>
-
 <p>If you don't see the effects of Sider in the game, check the
-<span class="file">sider.log</span> file (in the same folder where <span class="file">sider.exe</span> is) - it should
+<span class="file">sider.log</span> file (in the <b>sider</b> folder) - it should
 contain some helpful information on what went wrong.</p>
 
 
 <h3>SETTINGS (SIDER.INI)</h3>
 
 <p>There are several settings you can set in <span class="file">sider.ini</span>:</p>
-
-<pre>
-start.game = "steam://rungameid/1259970"
-</pre>
-
-<p>- optional setting. If it is specified, then Sider will
-operate in a new <b>"one-click launch" mode</b>: first, Sider will
-launch the game, using the provided steam url, then wait
-for the game to start and for <span class="file">sider.dll</span> to be loaded into
-the game process. After that, sider application will exit, but the
-game will continue with Sider activated - via <span class="file">sider.dll</span>.</p>
-
-
-<pre>
-exe.name = "\PES2021.exe"
-</pre>
-
-<p>- this sets the pattern(s) that the Sider program will use
-to identify which of the running processes is the game.
-You can have multiple "exe.name" lines in your <span class="file">sider.ini</span>,
-which is useful, for example, if you have several exe
-files with slightly different names that you use for
-online/offline play.</p>
-
 
 <pre>
 free.side.select = 1
@@ -226,8 +180,7 @@ of using game's original content. If multiple roots are specified, then
 they are checked in order that they are listed in <span class="file">sider.ini</span>. As soon as there
 is a filename match, the lookup stops. (So, higher cpk.root wins, if several of
 them have the same file). You can use either absolute paths or relative.
-Relative paths will be calculated relative to the folder where <span class="file">sider.exe</span> is
-located.</p>
+Relative paths will be calculated relative to the <b>sider</b> folder.</p>
 
 
 <pre>
@@ -396,6 +349,7 @@ By default, the game sets its priority to "above_normal".</p>
 Game research: <span class="user">nesa24, juce, digitalfoxx, zlac</span><br />
 Programming: <span class="user">juce</span><br />
 Testing: <span class="user">zlac, nesa24, Chuny, Hawke, sonofsam69, Cesc Fabregas, Paul LFC, mota10, predator002</span><br />
+Steam Deck compatibility testing: <span class="user">closerer</span><br />
 Blue Champions League ball: <span class="user">Hawke, digitalfoxx</span><br />
 Trophies: <span class="user">MJTS-140914, juce</span><br />
 </p>
