@@ -43,6 +43,7 @@ class config_t {
 public:
     int _debug;
     int _priority_class;
+    int _skip_checks;
     bool _livecpk_enabled;
     bool _lookup_cache_enabled;
     bool _lua_enabled;
@@ -129,6 +130,7 @@ public:
     config_t(const wstring& section_name, const wchar_t* config_ini) :
                  _section_name(section_name),
                  _debug(0),
+                 _skip_checks(0),
                  _priority_class(0),
                  _livecpk_enabled(false),
                  _lookup_cache_enabled(true),
@@ -388,6 +390,10 @@ public:
 
         _debug = GetPrivateProfileInt(_section_name.c_str(),
             L"debug", _debug,
+            config_ini);
+
+        _skip_checks = GetPrivateProfileInt(_section_name.c_str(),
+            L"skip.checks", _skip_checks,
             config_ini);
 
         _close_sider_on_exit = GetPrivateProfileInt(_section_name.c_str(),
