@@ -1,0 +1,89 @@
+<html>
+<head>
+<title>Sider 7 for Pro Evolution Soccer 2021</title>
+<style>
+body { margin-left: 1em; margin-right: 1em; margin-bottom: 2em; }
+body,h1,h2,h3,h4,h5,p,ol,ul,li { font-family: sans-serif; }
+img { border: 1px solid #888; }
+h1 { margin-bottom: 0; }
+h4 { color: #660066; margin-top: 0.1em; margin-bottom: 0.1em; }
+h3 { color: #113399; text-decoration: underline; margin-top: 1.6em; }
+.warn { color: #660000; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #880000; border-right: 0.5em solid #880000; background-color: #ccbbbb; }
+.gwarn { color: #666666; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #888888; border-right: 0.5em solid #888888; background-color: #cccccc; }
+.note { color: #336600; padding: 0 0.5em 0 0.5em; border-left: 0.5em solid #336600; border-right: 0.5em solid #336600; background-color: #bbccbb; }
+pre { color: #003366; padding: 0.3em 0.5em 0.3em 0.5em; background-color: #dde5ff; font-family: monospace;
+    border-top: solid 1px #4477aa; font-size: 0.9em;
+}
+.user { font-weight: bold; color: #2255aa; }
+.soft { font-weight: bold; color: #336600; }
+.pathname { font-weight: normal; font-family: monospace; color: #336600; }
+.file { font-weight: normal; font-family: monospace; color: #660099; }
+a { color: #33f; }
+</style>
+</head>
+
+<body>
+<!--<a href="sider.jpg"><img src="sider.jpg" width="100%"/></a>-->
+
+<h1>Sider 7 for Pro Evolution Soccer 2021</h1>
+<h4>version 7.3.0 from October 15, 2024</h4>
+<a href="readme.html">Back to readme.html</a>
+
+<h3>HOW TO INSTALL USING PATCHER</h3>
+
+<p>Now that you have already unpacked the sider zip archive, you will see the folder called <b>sider</b> inside.
+Move that folder inside the game directory, so that it looks like on these pictures:</p>
+
+<p>
+<a href="pcap1.png"><img src="pcap1.png" width="40%"/></a>
+<a href="pcap2.png"><img src="pcap2.png" width="40%"/></a>
+</p>
+
+<h4>Patching the game exe</h4>
+
+<p>This is a step that needs to only be done once. (Or if game updates and new PES2021.exe is downloaded
+you will need to run it again</p>
+
+<p class="gwarn">You may want to make a copy of your PES2021.exe, just in case things go wrong, but even if you
+don't do that, it can typically be recovered (restored to its original state) by verifying your files in Steam</p>
+
+<p>The idea is that we need to "instruct" the game to load <b>sider.dll</b>, which is what contains
+Sider engine and enables all the functionality that sider provides. This is done by running a utility
+program called <b>patcher.exe</b>, which alters the game executable in a subtle way - basically making
+it load sider.dll right after the game window is created</p>
+
+<p>
+<a href="patcher.png"><img src="patcher.png" width="60%"/></a>
+</p>
+
+<h3>HOW TO UNINSTALL</h3>
+
+<p class="note">Before uninstalling, remember that you can always temporarily disable sider by 
+renaming its directory, for example to <b>sider.disabled</b> or some other name like that.
+This way, when the game runs, it will not be able to load <b>sider.dll</b> and will continue
+without it</p>
+
+<p>If you want to completely remove sider from your computer, simply delete
+its folder, and that is it - uninstallation complete.</p>
+
+
+<h3>HOW TO USE</h3>
+
+<p>Just start the game as you normally would - via Steam UI, or a shortcut on desktop.
+(If you successfully patched your PES2021.exe using the <b>patcher</b> program, the
+game will load sider automatically)</p>
+
+<p class="gwarn">The very first time (or after Steam downloads a new, updated PES2021.exe), there will be a small delay
+between the launch of sider and the game starting - maybe 5-10 seconds, as sider needs to
+analyze the process and find hook places in memory. However, next time you do it, the game
+should start quickly (normally).</p>
+
+<p>If you don't see the effects of Sider in the game, check the
+<span class="file">sider.log</span> file (in the <b>sider</b> folder) - it should
+contain some helpful information on what went wrong.</p>
+
+<p>
+<a href="readme.html">Back to readme</a>
+
+</body>
+</html>
