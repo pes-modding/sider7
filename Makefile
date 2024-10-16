@@ -38,7 +38,7 @@ FW1LIBROOT=soft\FW1FontWrapper
 
 MAINC=/I soft\miniaudio
 
-all: sider.exe sider.dll
+all: sider.exe sider.dll patcher.exe
 
 sider.res: sider.rc
 	$(RC) -r -fo sider.res sider.rc
