@@ -1,0 +1,7 @@
+commit 97813fb924edf822455f91a5fbbdfdb349e5984f
+Author: Mike Pall <mike>
+Date:   Wed Oct 2 13:59:42 2024 +0200
+
+    macOS: Remove obsolete -single_module flag.
+    
+    Thanks to dundargoc. #1284
