@@ -105,6 +105,9 @@ sider.exe: main.obj sider.dll sider_main.res
 simple_playback.exe: simple_playback.obj
 	$(LINK) $(LFLAGS) /out:simple_playback.exe simple_playback.obj
 
+patcher.exe: patcher.obj
+    $(LINK) $(LFLAGS) /out:patcher.exe patcher.obj
+
 $(LUAJIT): $(LUALIBPATH)\$(LUALIB)
 	copy $(LUALIBPATH)\$(LUAJIT) .
 
