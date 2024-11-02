@@ -27,7 +27,7 @@ void read_patch(struct patch_t *p) {
     p->changes = new list<struct change_t>();
     while (!feof(f)) {
         struct change_t c;
-        if (fscanf(f, "%llu %o %o", &c.offset, &c.old_val, &c.new_val) != 3) {
+        if (fscanf(f, "%llu %hho %hho", &c.offset, &c.old_val, &c.new_val) != 3) {
             // skip invalid lines
             continue;
         }
@@ -35,7 +35,7 @@ void read_patch(struct patch_t *p) {
         p->changes->push_back(c);
     }
     fclose(f);
-    printf("INFO: read patch from %s. Changes: %u\n", p->filename, p->changes->size());
+    printf("INFO: read patch from %s. Changes: %zu\n", p->filename, p->changes->size());
 }
 
 void read_patches(char *ininame, list<patch_t> *li) {
@@ -112,7 +112,7 @@ bool apply_patch(char *filename, list<struct change_t> *li) {
                     return false;
                 }
             }
-            printf("INFO: file %s was successfully unpatched. %u bytes changed\n", filename, li->size());
+            printf("INFO: file %s was successfully unpatched. %zu bytes changed\n", filename, li->size());
             fclose(f);
         }
         else {
@@ -129,7 +129,7 @@ bool apply_patch(char *filename, list<struct change_t> *li) {
             return false;
         }
     }
-    printf("INFO: file %s was successfully patched. %u bytes changed\n", filename, li->size());
+    printf("INFO: file %s was successfully patched. %zu bytes changed\n", filename, li->size());
     fclose(f);
     return true;
 }
@@ -146,7 +146,7 @@ int main(int argc, char *argv[]) {
     printf("INFO: exepath: %s\n", exepath);
 
     read_patches("patcher.ini", &_patches);
-    printf("INFO: available patches to try: %d\n", _patches.size());
+    printf("INFO: available patches to try: %zd\n", _patches.size());
 
     list<struct patch_t>::iterator it;
     for (it = _patches.begin(); it != _patches.end(); it++) {
