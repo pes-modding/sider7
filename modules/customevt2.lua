@@ -1,8 +1,5 @@
 local m = {}
 
--- define event id: any 16-bit number
-local my_event_id = 42
-
 local function log_registers(registers)
     log("---------------------------------------")
     local keys = {}
@@ -22,16 +19,14 @@ local function log_registers(registers)
     log("---------------------------------------")
 end
 
-function m.custom_event(ctx, param, registers)
-    log(string.format("custom event triggered (param:%s, registers:%s)", param, registers))
+function m.finish_quickly(ctx, event_id, registers)
+    log(string.format("custom:check_end_of_half: (event_id:%s, registers:%s)", event_id, registers))
     log_registers(registers)
 
-    if param == my_event_id then
-        -- set end-of-half flag
-        return true, {
-            rax = "\x01" .. registers.rax:sub(2,8)  -- set al = 1
-        }
-    end
+    -- set end-of-half flag
+    return {
+        rax = "\x01" .. registers.rax:sub(2,8)  -- set al = 1
+    }
 end
 
 function m.init(ctx)
@@ -62,6 +57,10 @@ function m.init(ctx)
         error("custom events are not supported. Upgrade your sider")
     end
 
+    -- get unique id for the custom event name
+    local event_id = ctx.get_event_id("custom:check_end_of_half")
+    log(string.format("event_id: %d", event_id))
+
     -- put event trigger into codecave
     local codecave = memory.allocate_codecave(64)
     log("code cave allocated at: " .. memory.hex(codecave))
@@ -69,7 +68,7 @@ function m.init(ctx)
         "\x53" ..                                                -- push rbx
         "\x51" ..                                                -- push rcx
         "\x48\xbb" .. memory.pack("u64", ctx.custom_evt_rbx) ..  -- mov rbx, <sider_custom_event_rbx_hk>
-        "\x66\xb9" .. memory.pack("u16", my_event_id) ..         -- mov cx, <event_id>
+        "\x66\xb9" .. memory.pack("u16", event_id) ..            -- mov cx, <event_id>
         "\xff\xd3" ..                                            -- call rbx
         "\x48\x83\xc4\x10" ..                                    -- add rsp,10h
         "\xc3"                                                   -- ret
@@ -82,7 +81,7 @@ function m.init(ctx)
     memory.write(addr + 6, memory.pack("u64", codecave))
 
     -- register for custom events
-    ctx.register("custom_event", m.custom_event)
+    ctx.register("custom:check_end_of_half", m.finish_quickly)
 end
 
 return m

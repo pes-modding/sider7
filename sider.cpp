@@ -763,7 +763,7 @@ extern "C" void sider_set_edit_team_id(DWORD team_id_encoded);
 
 extern "C" void sider_custom_event_rbx_hk();
 
-extern "C" void sider_custom_event(uint16_t param, REGISTERS *regs);
+extern "C" void sider_custom_event(uint16_t event_id, REGISTERS *regs);
 
 static DWORD dwThreadId;
 static DWORD hookingThreadId = 0;
@@ -1581,6 +1581,14 @@ static BYTE* dummify_uniparam(BYTE *uniparam, size_t sz, size_t *new_sz)
 // if it is 0, then no need to call do_rewrite
 int _rewrite_count(0);
 
+struct custom_event_t {
+    uint16_t event_id;
+    struct custom_event_t *next;
+};
+
+unordered_map<string,uint16_t> _custom_event_ids;
+uint16_t _next_custom_event(1);
+
 struct module_t {
     //lookup_cache_t *cache;
     lua_State* L;
@@ -1628,6 +1636,7 @@ struct module_t {
     int evt_context_reset;
     int evt_custom;
     int evt_display_frame;
+    custom_event_t *custom_events;
 };
 vector<module_t*> _modules;
 module_t* _curr_m;
@@ -2351,39 +2360,35 @@ void module_context_reset(module_t *m)
     }
 }
 
-bool module_custom_event(module_t *m, uint16_t param, REGISTERS *regs)
+void module_custom_event(module_t *m, uint16_t param, REGISTERS *regs)
 {
-    bool processed = false;
     if (m->evt_custom != 0) {
         EnterCriticalSection(&_cs);
-        log_(L"module_custom_event for: %s\n", m->filename->c_str());
+        //log_(L"module_custom_event for: %s\n", m->filename->c_str());
         lua_pushvalue(m->L, m->evt_custom);
         lua_xmove(m->L, L, 1);
         // push params
         lua_pushvalue(L, 1); // ctx
         lua_pushinteger(L, param);
         lua_newtable(L); // registers
-        log_(L"regs: %p\n", regs);
+        //log_(L"regs: %p\n", regs);
         registers_to_lua_table(L, -1, regs);
-        log_(L"module_custom_event: registers copied to table\n");
+        //log_(L"module_custom_event: registers copied to table\n");
 
-        if (lua_pcall(L, 3, 2, 0) != LUA_OK) {
+        if (lua_pcall(L, 3, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
             logu_("[%d] lua ERROR from module_custom_event: %s\n", GetCurrentThreadId(), err);
             lua_pop(L, 1);
             LeaveCriticalSection(&_cs);
-            return false;
+            return;
         }
-        log_(L"module_custom_event: lua_pcall returned\n");
-        processed = lua_toboolean(L, -2);
+        //log_(L"module_custom_event: lua_pcall returned\n");
         if (lua_istable(L, -1)) {
             // registers
             registers_from_lua_table(L, -1, regs);
         }
-        lua_pop(L,2);
         LeaveCriticalSection(&_cs);
     }
-    return processed;
 }
 
 void module_set_teams(module_t *m, DWORD home, DWORD away) //, TEAM_INFO_STRUCT *home_team_info, TEAM_INFO_STRUCT *away_team_info)
@@ -4945,14 +4950,18 @@ void sider_context_reset()
     }
 }
 
-void sider_custom_event(uint16_t param, REGISTERS *regs) {
+void sider_custom_event(uint16_t event_id, REGISTERS *regs) {
     if (_config->_lua_enabled) {
         // lua callbacks
         vector<module_t*>::iterator i;
         for (i = _modules.begin(); i != _modules.end(); i++) {
-            bool processed = module_custom_event(*i, param, regs);
-            if (processed) {
-                break;
+            custom_event_t *p = (*i)->custom_events;
+            while (p) {
+                if (p->event_id == event_id) {
+                    module_custom_event(*i, event_id, regs);
+                    break;
+                }
+                p = p->next;
             }
         }
     }
@@ -5865,6 +5874,16 @@ static int sider_input_set_blocked(lua_State *L)
     return 0;
 }
 
+static uint16_t get_event_id_for_name(const char *s) {
+    unordered_map<string,uint16_t>::iterator it = _custom_event_ids.find(s);
+    if (it == _custom_event_ids.end()) {
+        uint16_t event_id = _next_custom_event++;
+        _custom_event_ids.insert(pair<string,uint16_t>(s, event_id));
+        return event_id;
+    }
+    return it->second;
+}
+
 static int sider_context_register(lua_State *L)
 {
     const char *event_key = luaL_checkstring(L, 1);
@@ -5983,12 +6002,6 @@ static int sider_context_register(lua_State *L)
         _curr_m->evt_context_reset = lua_gettop(_curr_m->L);
         logu_("Registered for \"%s\" event\n", event_key);
     }
-    else if (strcmp(event_key, "custom_event")==0) {
-        lua_pushvalue(L, -1);
-        lua_xmove(L, _curr_m->L, 1);
-        _curr_m->evt_custom = lua_gettop(_curr_m->L);
-        logu_("Registered for \"%s\" event\n", event_key);
-    }
     else if (strcmp(event_key, "display_frame")==0) {
         lua_pushvalue(L, -1);
         lua_xmove(L, _curr_m->L, 1);
@@ -6064,6 +6077,29 @@ static int sider_context_register(lua_State *L)
         _curr_m->evt_get_stadium_name = lua_gettop(_curr_m->L);
         logu_("Registered for \"%s\" event\n", event_key);
     }
+    else if (strncmp(event_key, "custom:", strlen("custom:"))==0) {
+        // custom event
+        lua_pushvalue(L, -1);
+        lua_xmove(L, _curr_m->L, 1);
+        _curr_m->evt_custom = lua_gettop(_curr_m->L);
+
+        // keep track of which custom events this module is registered for
+        uint16_t event_id = get_event_id_for_name(event_key);
+        if (_curr_m->custom_events == NULL) {
+            _curr_m->custom_events = new custom_event_t();
+            memset(_curr_m->custom_events, 0, sizeof(struct custom_event_t));
+            _curr_m->custom_events->event_id = event_id;
+        }
+        else {
+            custom_event_t *p = _curr_m->custom_events;
+            while (p->next) { p = p->next; }
+            custom_event_t *q = new custom_event_t();
+            memset(q, 0, sizeof(struct custom_event_t));
+            q->event_id = event_id;
+            p->next = q;
+        }
+        logu_("Registered for \"%s\" event\n", event_key);
+    }
     /*
     else if (strcmp(event_key, "enter_edit_mode")==0) {
         lua_pushvalue(L, -1);
@@ -6098,6 +6134,14 @@ static int sider_context_register(lua_State *L)
     return 0;
 }
 
+static int sider_context_get_event_id(lua_State *L)
+{
+    const char *event_key = luaL_checkstring(L, 1);
+    lua_pop(L, 1);
+    uint16_t event_id = get_event_id_for_name(event_key);
+    lua_pushinteger(L, event_id);
+    return 1;
+}
 
 static void push_context_table(lua_State *L)
 {
@@ -6110,6 +6154,9 @@ static void push_context_table(lua_State *L)
 
     lua_pushcfunction(L, sider_context_register);
     lua_setfield(L, -2, "register");
+
+    lua_pushcfunction(L, sider_context_get_event_id);
+    lua_setfield(L, -2, "get_event_id");
 
     lua_pushlightuserdata(L, (void*)sider_custom_event_rbx_hk);
     lua_setfield(L, -2, "custom_evt_rbx");
