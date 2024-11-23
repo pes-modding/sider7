@@ -55,6 +55,18 @@ function m.get_stadium_name(ctx, stadium_name)
     tlog("get_stadium_name: %s", stadium_name)
 end
 
+function m.show(ctx)
+    tlog("overlay state transition: off --> on")
+end
+
+function m.hide(ctx)
+    tlog("overlay state transition: on --> off")
+end
+
+function m.context_reset(ctx)
+    tlog("context is reset")
+end
+
 local opts = { image_width = 32, image_hmargin = 4, image_vmargin = 2 }
 function m.overlay_on(ctx)
     local memory_used = collectgarbage("count")
@@ -74,6 +86,9 @@ function m.init(ctx)
     ctx.register("get_ball_name", m.get_ball_name)
     ctx.register("get_stadium_name", m.get_stadium_name)
     ctx.register("overlay_on", m.overlay_on)
+    ctx.register("show", m.show)
+    ctx.register("hide", m.hide)
+    ctx.register("context_reset", m.context_reset)
 end
 
 return m

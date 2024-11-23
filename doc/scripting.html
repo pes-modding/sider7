@@ -1208,6 +1208,21 @@ Returns 2 values:
 </ol>
 </p>
 
+<p class="func">
+memory.allocate_codecave(num_bytes)
+</p>
+
+<p class="desc">This function allocates a new memory block of <span class="file">num_bytes</span> bytes,
+and sets its "protection" in such a way that if machine code instructions are written into it, they
+will be allowed to execute. This is what is called a "code cave": a place in memory where you can
+write new machine code. 
+(This is useful mostly for advanced modding techniques, where you may need to write new code
+to the process memory and then redirect execution flow to it.)<br />
+<br />
+Return value: an address of new memory block.<br />
+(If unable to allocate memory, the function will throw an error with details)
+</p>
+
 <a class="top" href="#">Top</a>
 <a name="fs">
 <h3>9. File system library (fs)</h3>

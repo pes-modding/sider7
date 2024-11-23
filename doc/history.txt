@@ -2,6 +2,17 @@ Sider 7 Release History
 =======================
 
 
+November 23, 2024
+v7.3.0
+- unified version that supports two different ways of installing/running sider
+  to accommodate different ways the game can be run: on Windows, macOS, Linux, and SteamDeck
+- custom events: support for creating custom trigger code and handler functions in Lua modules
+- updated LuaJIT compiler to 2.1 version from October 2024
+- tweak for "zlib" library: best compression is now used by default
+- new event: "context_reset": occurs when the game returns to main menu
+- new event: "on_frame": fired every time the game renders a frame
+
+
 March 27, 2024
 v7.2.1
 - update for special version with modified game-attachment logic
