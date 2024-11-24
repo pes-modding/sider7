@@ -56,13 +56,13 @@ but the original concept and the vision are all by <span class="user">FerJo75</s
 him none of this would have existed.</p>
 
 <p class="note">This is a rather advanced topic, so if you really want to get a good
-understanding of what is going on here and how things work, be prepared to dome some
+understanding of what is going on here and how things work, be prepared to do some
 extra reading outside of this guide, when necessary. There is only so much detail
 i can go into here, but if you feel lost and confused, don't lose heart: things are
 not as difficult as they look, once you start digging in.</p>
 
 <p>We will be working with assembly language and even sometimes directly
-wich machine code instructions, as well as Lua on the other side. It can be very exciting
+wich machine code instructions, as well as Lua on the other side. It can be a very exciting
 and rewarding experience, but also very frustrating, when things do not work right away.
 This is a rather wild mix of high level and very low level programming, so be prepared to be patient
 and not allow the frustration of crashes and bugs to get the better of you ;)</p>
@@ -186,32 +186,33 @@ written in assembly language, and it expects to receive two values on the stack:
 </ul>
 Those are needed so that sider can pass the actual values of all the registers, including what was in <b>rbx</b>
 and <b>rcx</b> before the event generator code altered them. The generator code needs to modify them, because: <b>cx</b> must
-contain the unique event id of this custom event, and <b>rbx</b> must used as an address holder for the far call
+contain the unique event id of this custom event, and <b>rbx</b> must be used as an address holder for the far call
 to "sider_custom_event_rbx_hk" function (the "call rbx" instruction).
 </p>
 <p>The address of the "sider_custom_event_rbx_hk" function is not fixed, it can change from one game session to
 another, so it cannot be hardcorded to some number, but instead needs to be determined at run-time - we will see
 how to do that very soon, when we have Lua module write the event generator code, instead of doing it manually.
 </p>
-<p>Same goes for event id. Those are fixed, but instead "allocated" by sider, based on custom event name.
+<p>Same goes for event id. An event id is not fixed, but instead "allocated" by sider, based on custom event name.
 In our example this name is <b>custom:end_of_half_check</b>. Sider provides is a utility function to find out
-what the event id is for any given custom event name.</p>
+what the event id is for any given custom event name. In the assembly code above, it is hardcoded to 1, but once
+we get to writing this logic in the Lua module, we will do it dynamically.</p>
 <p>
-After the call is done, stack needs to be restored to its original state, so the two values we pushed on
-to it, need to popped back, but we don't need the actual values, so we do:
+After the call is done, stack needs to be restored to its original state, but we don't need the actual values,
+so we can through them away, by just updating stack pointer (rsp) register:
 <pre>
 add rsp, 10h</pre>
 </p>
 <p>Lastly, depending on the specific scenario, you may or may not need to write code to compensate for the
 fact that we've overwritten some original game code. In this particular scenario, we don't actually need to do
-that, because the end effect of the original function was to set register <b>al</b> either to 0 or to 1, where
+that, because the end effect of the original function was to set register <b>al</b> to either 0 or 1, where
 1 means: end of the half. Since our <b>event handler</b> returns the registers it wants sider to modify, it
 can return modified <b>rax</b> if it chooses to do so. Nothing else is needed here.</p>
 </p>
 
 <h4>13.4 Custom event generator: in a Lua module</h4>
 
-<p>Now, it was mentioned that two things are not really known until the game is running: the address of
+<p>Now, it was mentioned earlier that two things are not really known until the game is running: the address of
 "sider_custom_event_rbx_hk" function, and which custom event id corresponds to which custom event name.
 That is the first reason why you don't want to manually patch the code, using a debugger, such as x64dbg.
 Another reason is that it is just too much hassle to do so every time, and we simply want to start the
@@ -224,7 +225,7 @@ for out example of custom event called "<b>custom:check_end_of_half</b>"</p>
 
 <p>First, we need to determine the address at which we need to patch the game. While you could hardcode it
 to a specific value (that you had found during your research), i don't recommend doing it that way, because
-different versions of PES2021.exe will slightly different address. Instead, what you can do is use
+different versions of PES2021.exe will have slightly different addresses. Instead, what you can do is use
 <b>memory.search_process</b> function to dynamically locate the spot you are interested in, because it is
 usually very easy to find a unique sequence of bytes right at the place you are looking for, or maybe slightly
 before or after. This is how we can do it:
