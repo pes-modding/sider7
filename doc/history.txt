@@ -11,6 +11,7 @@ v7.3.0
 - tweak for "zlib" library: best compression is now used by default
 - new event: "context_reset": occurs when the game returns to main menu
 - new event: "on_frame": fired every time the game renders a frame
+- new fs.make_dirs function: to create a directory with all intermediate dirs too
 
 
 March 27, 2024

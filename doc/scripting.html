@@ -1232,6 +1232,17 @@ Return value: an address of new memory block.<br />
 unavailable in standard Lua, but are useful when dealing with files and directories.</p>
 
 <p class="func">
+fs.make_dirs(path)
+</p>
+
+<p class="desc">Creates a directory and all intermediate directories in the path, if necessary.<br />
+Return value: <span class="file">nil</span> or a string containing error message, if there was an error.<br />
+<br />
+NOTE: If directory already exists, the return value will contain "Directory already exists" string.
+Your logic can do whatever it wants with that information.
+</p>
+
+<p class="func">
 fs.find_files(pattern)
 </p>
 
