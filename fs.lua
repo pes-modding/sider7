@@ -59,9 +59,9 @@ local ERROR_ALREADY_EXISTS = 183
 local NULL = ffi.new('void*', nil)
 
 local dir_errors = {
-    [ERROR_UNKNOWN] = "Unexpected error",
-    [ERROR_ALREADY_EXISTS] = "Directory already exists",
-    [ERROR_PATH_NOT_FOUND] = "Path not found",
+    [ERROR_UNKNOWN] = 'Unexpected error',
+    [ERROR_ALREADY_EXISTS] = 'Directory already exists',
+    [ERROR_PATH_NOT_FOUND] = 'Path not found',
 }
 
 local function make_dir(pathname)
@@ -89,7 +89,7 @@ local function make_dirs(pathname)
     end
 
     -- try to create intermediate directories
-    local parent_dir, _ = string.match(pathname, "(.*)[\\/](.+)")
+    local parent_dir, _ = string.match(pathname, '(.*)[\\/](.+)')
     if not parent_dir then
         return ERROR_UNKNOWN
     end
@@ -105,7 +105,7 @@ end
 function m.make_dirs(pathname)
     local err = make_dirs(pathname)
     if err ~= nil then
-        return dir_errors[err] or string.format("Error code: %s", err)
+        return dir_errors[err] or string.format('Error code: %s', err)
     end
 end
 
