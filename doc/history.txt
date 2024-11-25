@@ -2,7 +2,7 @@ Sider 7 Release History
 =======================
 
 
-November 23, 2024
+November 24, 2024
 v7.3.0
 - unified version that supports two different ways of installing/running sider
   to accommodate different ways the game can be run: on Windows, macOS, Linux, and SteamDeck

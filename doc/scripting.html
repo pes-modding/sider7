@@ -850,6 +850,16 @@ at runtime. See <a href="readme.html">readme.html</a> for details on how this se
 </p>
 
 <p class="evthdr">
+Event name: <span class="evt">"on_frame"</span><br />
+Handler function: <span class="func">f(ctx)</span><br />
+Return value expected: <span class="file">nil</span>
+</p>
+
+<p>This will fire every time the game renders a frame. Be careful with
+how much logic you put in this function: if there is too much complex
+processing, you will basically kill your frame rate.</p>
+
+<p class="evthdr">
 Event name: <span class="evt">"key_down"</span><br />
 Handler function: <span class="func">f(ctx, vkey)</span><br />
 Return value expected: <span class="file">nil</span>
