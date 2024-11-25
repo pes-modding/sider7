@@ -8,6 +8,7 @@ int main(char *argv[])
 {
     FILE *f, *inf;
     char line[512];
+    int i;
     memset(line, 0, sizeof(line));
 
     f = fopen("fslib_lua.h","wt");
@@ -24,7 +25,19 @@ int main(char *argv[])
         if (line[strlen(line)-1]=='\r') {
             line[strlen(line)-1]='\0';
         }
-        fprintf(f, "%s\\r\\n\\\n", line);
+        for (i=0; i<strlen(line); i++) {
+            switch (line[i]) {
+                case '\\':
+                    fprintf(f, "\\\\");
+                    break;
+                case '"':
+                    fprintf(f, "\\\"");
+                    break;
+                default:
+                    fprintf(f, "%c", line[i]);
+            }
+        }
+        fprintf(f, "\\r\\n\\\n");
         memset(line, 0, sizeof(line));
     }
     fclose(inf);
