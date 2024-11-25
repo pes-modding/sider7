@@ -1,12 +1,12 @@
 -- fs : file-system utilities
 
 local ffi = require('ffi')
+local C = ffi.C
 
 local m = {}
 
-if ffi ~= nil then
-    ffi.cdef([[
-typedef int BOOL;
+ffi.cdef([[
+typedef bool BOOL;
 typedef uint16_t WCHAR;
 typedef uint16_t WORD;
 typedef uint32_t UINT;
@@ -49,14 +49,13 @@ int WideCharToMultiByte(UINT CodePage, DWORD dwFlags, LPWSTR lpWideCharStr, int 
         LPCCH lpDefaultChar, LPBOOL lpUsedDefaultChar);
 BOOL CreateDirectoryW(LPCWSTR *lpPathName, void *lpSecurityAttributes);
 int GetLastError();
-    ]])
-end
+]])
 
 local CP_UTF8 = 65001
 local ERROR_UNKNOWN = -1
 local ERROR_PATH_NOT_FOUND = 3
 local ERROR_ALREADY_EXISTS = 183
-local NULL = ffi.new('void*', nil)
+local NULL = ffi.new("void*", nil)
 
 local dir_errors = {
     [ERROR_UNKNOWN] = 'Unexpected error',
@@ -67,12 +66,14 @@ local dir_errors = {
 local function make_dir(pathname)
     local char_str = ffi.cast('char*', pathname)
     local wide_char_str = ffi.new('uint16_t[?]', #pathname+1)
-    if ffi.C.MultiByteToWideChar(CP_UTF8, 0, char_str, #pathname, wide_char_str, #pathname+1) == 0 then
+
+    if C.MultiByteToWideChar(CP_UTF8, 0, char_str, #pathname, wide_char_str, #pathname+1) == 0 then
         return 'MultiByteToWideChar returned error for pathname'
     end
 
-    if ffi.C.CreateDirectoryW(wide_char_str, NULL) == 0 then
-        return ffi.C.GetLastError()
+    local ok = C.CreateDirectoryW(wide_char_str, NULL)
+    if not ok then
+        return C.GetLastError()
     end
 end
 
@@ -89,7 +90,7 @@ local function make_dirs(pathname)
     end
 
     -- try to create intermediate directories
-    local parent_dir, _ = string.match(pathname, '(.*)[\\/](.+)')
+    local parent_dir, _ = string.match(pathname, '(.*)[/\\](.+)')
     if not parent_dir then
         return ERROR_UNKNOWN
     end
@@ -120,7 +121,7 @@ function m.find_files(pattern)
     end
 
     local find_data = ffi.new('WIN32_FIND_DATAW[?]', 1)
-    local handle = ffi.C.FindFirstFileW(wide_char_str, find_data)
+    local handle = C.FindFirstFileW(wide_char_str, find_data)
     if handle == -1 then
         return function()
             return nil, nil
@@ -131,7 +132,7 @@ function m.find_files(pattern)
     local null = ffi.new('void*')
     return function()
         if not res then
-            ffi.C.FindClose(handle)
+            C.FindClose(handle)
             return nil, nil
         end
         local filetype = 'file'
@@ -141,12 +142,12 @@ function m.find_files(pattern)
         local filename
         local filename_wide_str = find_data[0].cFileName
         local filename_mb_str = ffi.new('char[?]', 512)
-        if ffi.C.WideCharToMultiByte(CP_UTF8, 0, filename_wide_str, -1, filename_mb_str, 512, null, null) > 0 then
+        if C.WideCharToMultiByte(CP_UTF8, 0, filename_wide_str, -1, filename_mb_str, 512, null, null) > 0 then
             filename = ffi.string(filename_mb_str)
         else
             log(string.format('WARN: cannot convert with WideCharToMultiByte - skipping'))
         end
-        res = ffi.C.FindNextFileW(handle, find_data)
+        res = C.FindNextFileW(handle, find_data)
         return filename, filetype
     end
 end
