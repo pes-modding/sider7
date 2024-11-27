@@ -127,19 +127,18 @@ BYTE* get_target_addr(BYTE* call_location)
     return NULL;
 }
 
-void hook_call_point(
-    DWORD addr, void* func, int codeShift, int numNops, bool addRetn)
+void hook_call_point(BYTE *addr, void* func, int codeShift, int numNops, bool addRetn)
 {
-    DWORD target = (DWORD)func + codeShift;
+    BYTE *target = (BYTE*)func + codeShift;
 	if (addr && target)
 	{
-	    BYTE* bptr = (BYTE*)addr;
+	    BYTE* bptr = addr;
 	    DWORD protection = 0;
 	    DWORD newProtection = PAGE_EXECUTE_READWRITE;
 	    if (VirtualProtect(bptr, 16, newProtection, &protection)) {
 	        bptr[0] = 0xe8;
 	        DWORD* ptr = (DWORD*)(addr + 1);
-	        ptr[0] = target - (DWORD)(addr + 5);
+	        ptr[0] = target - (addr + 5);
             // padding with NOPs
             for (int i=0; i<numNops; i++) bptr[5+i] = 0x90;
             if (addRetn)

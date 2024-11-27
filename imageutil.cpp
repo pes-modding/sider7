@@ -45,7 +45,7 @@ IMAGE_SECTION_HEADER* GetSectionHeaderByOrdinal(int i)
 DWORD GetImageDataDirectory(HMODULE hMod, IMAGE_DATA_DIRECTORY** ppDataDirectory)
 {
 	IMAGE_DOS_HEADER* p = (IMAGE_DOS_HEADER*)hMod;
-	IMAGE_NT_HEADERS* nth = (IMAGE_NT_HEADERS*)((DWORD)hMod + p->e_lfanew);
+	IMAGE_NT_HEADERS* nth = (IMAGE_NT_HEADERS*)((BYTE*)hMod + p->e_lfanew);
 	IMAGE_FILE_HEADER* fh = &(nth->FileHeader);
 	if (fh->SizeOfOptionalHeader == 0) return 0;
 
@@ -71,7 +71,7 @@ IMAGE_IMPORT_DESCRIPTOR* GetModuleImportDescriptors(HMODULE hMod)
 	DWORD numEntries = GetImageDataDirectory(hMod, &dataDirectory);
 	if (numEntries < 2) return NULL;
 	DWORD rva = dataDirectory[1].VirtualAddress;
-	return (IMAGE_IMPORT_DESCRIPTOR*)((DWORD)hMod + (DWORD)rva);
+	return (IMAGE_IMPORT_DESCRIPTOR*)((BYTE*)hMod + rva);
 }
 
 // Position the file at the beginning of specified section
