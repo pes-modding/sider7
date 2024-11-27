@@ -781,6 +781,7 @@ bool _is_game(false);
 bool _is_sider(false);
 bool _is_edit_mode(false);
 bool _priority_set(false);
+bool _ok_to_exit(false);
 
 wstring _overlay_header;
 wchar_t _overlay_text[4096];
@@ -4436,6 +4437,15 @@ HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_S
         DBG(64) logu_("Present already hooked.\n");
     }
     else {
+        _ok_to_exit = true;
+        if (!_config->_start_game.empty()) {
+            HWND main_hwnd = FindWindow(SIDERCLS, NULL);
+            if (main_hwnd) {
+                PostMessage(main_hwnd, SIDER_MSG_EXIT, 0, 0);
+                logu_("Posted message for sider.exe to quit\n");
+            }
+        }
+
         prep_stuff();
 
         logu_("Hooking Present\n");
@@ -7584,15 +7594,6 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 logu_("Utf8org: %d, %d\n", f3-s3, f4-s4);
                 **/
 
-                // tell sider.exe to unhook CBT and quit
-                if (!_config->_start_game.empty()) {
-                    HWND main_hwnd = FindWindow(SIDERCLS, NULL);
-                    if (main_hwnd) {
-                        PostMessage(main_hwnd, SIDER_MSG_EXIT, 0, 0);
-                        log_(L"Posted message for sider.exe to quit\n");
-                    }
-                }
-
                 delete match;
                 return TRUE;
             }
@@ -7659,11 +7660,13 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
 #endif
 
                 // tell sider.exe to close
-                if (_config->_close_sider_on_exit || !_config->_start_game.empty()) {
-                    main_hwnd = FindWindow(SIDERCLS, NULL);
-                    if (main_hwnd) {
-                        PostMessage(main_hwnd, SIDER_MSG_EXIT, 0, 0);
-                        log_(L"Posted message for sider.exe to quit\n");
+                if (_ok_to_exit) {
+                    if (_config->_close_sider_on_exit || !_config->_start_game.empty()) {
+                        main_hwnd = FindWindow(SIDERCLS, NULL);
+                        if (main_hwnd) {
+                            PostMessage(main_hwnd, SIDER_MSG_EXIT, 0, 0);
+                            log_(L"Posted message for sider.exe to quit\n");
+                        }
                     }
                 }
                 DeleteCriticalSection(&_cs);
