@@ -131,10 +131,16 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 
     // launch game, if specified in config
     wstring start_game;
+    wstring work_dir;
     if (get_start_game(start_game)) {
         open_log_(L"start.game: %s\n", start_game.c_str());
+        int pos = start_game.rfind(L"\\");
+        if (pos != string::npos) {
+            work_dir = start_game.substr(0, pos);
+            log_(L"working directory: %s\n", work_dir.c_str());
+        }
         close_log_();
-        ShellExecute(NULL,L"open",start_game.c_str(),0,0,SW_SHOWNORMAL);
+        ShellExecute(NULL,L"open",start_game.c_str(),0,work_dir.c_str(),SW_SHOWNORMAL);
     }
 
     //SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
