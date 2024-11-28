@@ -790,6 +790,7 @@ char _overlay_utf8_text[4096];
 char _overlay_utf8_image_path[2048];
 
 wchar_t module_filename[MAX_PATH];
+wchar_t app_log[MAX_PATH];
 wchar_t dll_log[MAX_PATH];
 wchar_t dll_ini[MAX_PATH];
 wchar_t gamepad_ini[MAX_PATH];
@@ -1655,6 +1656,12 @@ bool init_paths() {
     }
     p = wcsrchr(dll_log, L'.');
     wcscpy(p, L".log");
+
+    // prep log filename
+    memset(app_log, 0, sizeof(app_log));
+    wcscpy(app_log, dll_log);
+    p = wcsrchr(app_log, L'.');
+    wcscpy(p, L"-app.log");
 
     // prep ini filename
     memset(dll_ini, 0, sizeof(dll_ini));
@@ -7782,8 +7789,7 @@ LRESULT CALLBACK meconnect(int code, WPARAM wParam, LPARAM lParam)
 void setHook()
 {
     handle = SetWindowsHookEx(WH_CBT, meconnect, myHDLL, 0);
-    log_(L"------------------------\n");
-    log_(L"handle = %p\n", handle);
+    applog_(L"handle = %p\n", handle);
 }
 
 void setHook1()
@@ -7794,14 +7800,13 @@ void setHook1()
 
 void unsetHook(bool all)
 {
-    open_log_(L"windows hooks: handle = %p\n", handle);
+    applog_(L"windows hooks: handle = %p\n", handle);
     UnhookWindowsHookEx(handle);
-    log_(L"windows hooks: CBT unhooked\n");
+    applog_(L"windows hooks: CBT unhooked\n");
     if (all && kb_handle) {
         UnhookWindowsHookEx(kb_handle);
-        log_(L"windows hooks: keyboard unhooked\n");
+        applog_(L"windows hooks: keyboard unhooked\n");
     }
-    close_log_();
 }
 
 bool get_start_game(wstring &start_game) {

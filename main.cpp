@@ -21,9 +21,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
         case SIDER_MSG_EXIT:
             // Exit the application when the window closes
-            append_to_log_(L"WindowProc:: uMsg=0x%x\n", uMsg);
+            applog_(L"WindowProc:: uMsg=0x%x\n", uMsg);
             unsetHook();
-            append_to_log_(L"WindowProc:: sider exiting\n");
+            applog_(L"WindowProc:: sider exiting\n");
             PostQuitMessage(0);
             return true;
     }
@@ -133,13 +133,12 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     wstring start_game;
     wstring work_dir;
     if (get_start_game(start_game)) {
-        open_log_(L"start.game: %s\n", start_game.c_str());
+        applog_(L"start.game: %s\n", start_game.c_str());
         int pos = start_game.rfind(L"\\");
         if (pos != string::npos) {
             work_dir = start_game.substr(0, pos);
-            log_(L"working directory: %s\n", work_dir.c_str());
+            applog_(L"working directory: %s\n", work_dir.c_str());
         }
-        close_log_();
         ShellExecute(NULL,L"open",start_game.c_str(),0,work_dir.c_str(),SW_SHOWNORMAL);
     }
 
@@ -165,9 +164,10 @@ int init()
     wstring version;
     version.reserve(64);
     get_module_version(NULL,version);
-    start_log_(L"Sider: version %s\n", version.c_str());
+    truncate_applog_();
+    applog_(L"============================\n");
+    applog_(L"Sider App: version %s\n", version.c_str());
     setHook();
-    log_(L"Main: Init DONE\n");
-    close_log_();
+    applog_(L"Main: Init DONE\n");
 	return 0;
 }

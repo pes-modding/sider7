@@ -8,7 +8,9 @@
 #include "kmp.h"
 
 extern wchar_t dll_log[MAX_PATH];
+extern wchar_t app_log[MAX_PATH];
 static FILE *file = NULL;
+static FILE *file2 = NULL;
 static CRITICAL_SECTION _log_cs;
 
 #define LOG_BUF_LEN 0x200
@@ -95,21 +97,25 @@ __declspec(dllexport) void close_log_()
     DeleteCriticalSection(&_log_cs);
 }
 
-__declspec(dllexport) void append_to_log_(const wchar_t *format, ...)
+__declspec(dllexport) void truncate_applog_()
 {
-    InitializeCriticalSection(&_log_cs);
-    EnterCriticalSection(&_log_cs);
-    file = _wfopen(dll_log, L"a+");
-    if (file) {
+    FILE *f = _wfopen(app_log, L"wt");
+    if (f) {
+        fclose(f);
+    }
+}
+
+__declspec(dllexport) void applog_(const wchar_t *format, ...)
+{
+    FILE *f = _wfopen(app_log, L"at");
+    if (f) {
         va_list params;
         va_start(params, format);
-        vfwprintf(file, format, params);
+        vfwprintf(f, format, params);
         va_end(params);
-        fflush(file);
-        fclose(file);
-        file = NULL;
+        fflush(f);
+        fclose(f);
     }
-    LeaveCriticalSection(&_log_cs);
 }
 
 BYTE* get_target_addr(BYTE* call_location)
