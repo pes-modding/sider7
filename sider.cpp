@@ -4403,6 +4403,14 @@ HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags)
     return hr;
 }
 
+static void sendExitMessage() {
+    HWND main_hwnd = FindWindow(SIDERCLS, NULL);
+    if (main_hwnd) {
+        PostMessage(main_hwnd, SIDER_MSG_EXIT, 0, 0);
+        log_(L"Posted message for sider.exe to quit\n");
+    }
+}
+
 HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_SWAP_CHAIN_DESC *pDesc, IDXGISwapChain **ppSwapChain)
 {
     HRESULT hr = _org_CreateSwapChain(pFactory, pDevice, pDesc, ppSwapChain);
@@ -4444,15 +4452,6 @@ HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_S
         DBG(64) logu_("Present already hooked.\n");
     }
     else {
-        _ok_to_exit = true;
-        if (!_config->_start_game.empty()) {
-            HWND main_hwnd = FindWindow(SIDERCLS, NULL);
-            if (main_hwnd) {
-                PostMessage(main_hwnd, SIDER_MSG_EXIT, 0, 0);
-                logu_("Posted message for sider.exe to quit\n");
-            }
-        }
-
         prep_stuff();
 
         logu_("Hooking Present\n");
@@ -4479,6 +4478,14 @@ HRESULT sider_CreateDXGIFactory1(REFIID riid, void **ppFactory)
 {
     HRESULT hr = _org_CreateDXGIFactory1(riid, ppFactory);
     DBG(64) logu_("hr=0x%x, IDXGIFactory1: %p\n", hr, *ppFactory);
+
+    _ok_to_exit = true;
+    if (!_config->_start_game.empty()) {
+        sendExitMessage();
+    }
+    if (!_config->_overlay_enabled) {
+        return hr;
+    }
 
     // check if we need to hook SwapChain method
     IDXGIFactory1 *f = (IDXGIFactory1*)(*ppFactory);
@@ -6942,7 +6949,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[13] = _config->_free_side_select ? sizeof(pattern_sider)-1 : 0;
     frag_len[14] = _config->_lua_enabled ? sizeof(pattern_trophy_table)-1 : 0;
     frag_len[15] = _config->_lua_enabled ? sizeof(pattern_ball_name)-1 : 0;
-    frag_len[16] = _config->_overlay_enabled ? sizeof(pattern_dxgi)-1 : 0;
+    frag_len[16] = sizeof(pattern_dxgi)-1;
     frag_len[17] = _config->_lua_enabled ? sizeof(pattern_set_stadium_choice)-1 : 0;
     frag_len[18] = _config->_lua_enabled ? sizeof(pattern_stadium_name)-1 : 0;
     frag_len[19] = _config->_lua_enabled ? sizeof(pattern_def_stadium_name)-1 : 0;
@@ -7188,11 +7195,9 @@ bool all_found(config_t *cfg) {
             cfg->_hp_at_call_set_minutes > 0
         );
     }
-    if (cfg->_overlay_enabled) {
-        all = all && (
-            cfg->_hp_at_dxgi > 0
-        );
-    }
+    all = all && (
+        cfg->_hp_at_dxgi > 0
+    );
     if (cfg->_free_side_select) {
         all = all && (
             cfg->_hp_at_sider > 0
@@ -7269,14 +7274,12 @@ bool hook_if_all_found() {
             hook_call_rcx(_config->_hp_at_lookup_file, (BYTE*)sider_lookup_file_hk, 3);
         }
 
-        if (_config->_overlay_enabled && _config->_lua_enabled) {
-            if (_config->_hp_at_dxgi) {
-                BYTE *addr = get_target_addr(_config->_hp_at_dxgi);
-                BYTE *loc = get_target_location(addr);
-                _org_CreateDXGIFactory1 = *(PFN_CreateDXGIFactory1*)loc;
-                logu_("_org_CreateDXGIFactory1: %p\n", _org_CreateDXGIFactory1);
-                hook_indirect_call(addr, (BYTE*)sider_CreateDXGIFactory1);
-            }
+        if (_config->_hp_at_dxgi) {
+            BYTE *addr = get_target_addr(_config->_hp_at_dxgi);
+            BYTE *loc = get_target_location(addr);
+            _org_CreateDXGIFactory1 = *(PFN_CreateDXGIFactory1*)loc;
+            logu_("_org_CreateDXGIFactory1: %p\n", _org_CreateDXGIFactory1);
+            hook_indirect_call(addr, (BYTE*)sider_CreateDXGIFactory1);
         }
 
         if (_config->_lua_enabled) {
@@ -7669,11 +7672,7 @@ INT APIENTRY DllMain(HMODULE hDLL, DWORD Reason, LPVOID Reserved)
                 // tell sider.exe to close
                 if (_ok_to_exit) {
                     if (_config->_close_sider_on_exit || !_config->_start_game.empty()) {
-                        main_hwnd = FindWindow(SIDERCLS, NULL);
-                        if (main_hwnd) {
-                            PostMessage(main_hwnd, SIDER_MSG_EXIT, 0, 0);
-                            log_(L"Posted message for sider.exe to quit\n");
-                        }
+                        sendExitMessage();
                     }
                 }
                 DeleteCriticalSection(&_cs);
