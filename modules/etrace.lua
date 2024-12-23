@@ -67,12 +67,13 @@ function m.context_reset(ctx)
     tlog("context is reset")
 end
 
-function m.goal_scored(ctx, goal_info)
-    tlog("goal_scored: %s", t2s(goal_info))
-    if goal_info.home_or_away == 0 then
-        tlog("goal_scored: Player %s from team %s scored", goal_info.player_id, ctx.home_team)
+function m.goal_scored(ctx, gi)
+    tlog("goal_scored: %s", t2s(gi))
+    local p = string.format("Player %s %s (ofset:0x%x)", gi.player_id, gi.player_name_on_shirt, gi.player_offset)
+    if gi.home_or_away == 0 then
+        tlog("goal_scored: %s from home team %s scored", p, ctx.home_team)
     else
-        tlog("goal_scored: Player %s from team %s scored", goal_info.player_id, ctx.away_team)
+        tlog("goal_scored: %s from away team %s scored", p, ctx.away_team)
     end
 end
 

@@ -795,6 +795,7 @@ sider_goal_scored_hk proc
         push    rbx
         pushfq
         sub     rsp,28h
+        ; r9 already contains a useful pointer
         mov     r8,rdx    ; 3rd param: is_away_team_goal flag
         mov     rdx,rcx   ; 2nd param: not_an_own_goal
         mov     rcx,rbx   ; 1st param: player id

@@ -767,7 +767,7 @@ extern "C" void sider_custom_event(uint16_t event_id, REGISTERS *regs);
 
 extern "C" void sider_goal_scored_hk();
 
-extern "C" void sider_goal_scored(DWORD player_id, DWORD not_an_own_goal, DWORD is_away);
+extern "C" void sider_goal_scored(DWORD player_id, DWORD player_offset, DWORD is_away, BYTE* player_info);
 
 static DWORD dwThreadId;
 static DWORD hookingThreadId = 0;
@@ -2121,7 +2121,7 @@ bool module_trophy_rewrite(module_t *m, WORD tournament_id, WORD *new_tid)
     return assigned;
 }
 
-void module_goal_scored(module_t *m, DWORD player_id, bool own_goal, int home_or_away)
+void module_goal_scored(module_t *m, DWORD player_id, DWORD player_offset, int home_or_away, BYTE *player_info)
 {
     if (m->evt_goal_scored != 0) {
         EnterCriticalSection(&_cs);
@@ -2132,10 +2132,12 @@ void module_goal_scored(module_t *m, DWORD player_id, bool own_goal, int home_or
         lua_newtable(L);
         lua_pushinteger(L, player_id);
         lua_setfield(L, -2, "player_id");
-        lua_pushboolean(L, own_goal);
-        lua_setfield(L, -2, "own_goal");
+        lua_pushinteger(L, player_offset);
+        lua_setfield(L, -2, "player_offset");
         lua_pushinteger(L, home_or_away);
         lua_setfield(L, -2, "home_or_away");
+        lua_pushstring(L, (char*)(player_info + 0x174));
+        lua_setfield(L, -2, "player_name_on_shirt");
         if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
             logu_("[%d] lua ERROR from module_goal_scored: %s\n",
@@ -5020,14 +5022,15 @@ void sider_custom_event(uint16_t event_id, REGISTERS *regs) {
     }
 }
 
-void sider_goal_scored(DWORD player_id, DWORD not_an_own_goal, DWORD is_away_team_goal) {
-    DBG(32768) logu_("GOAL scored: player_id=%d, not_an_own_goal=%d, is_away_team_goal=%d\n", player_id, not_an_own_goal, is_away_team_goal);
+void sider_goal_scored(DWORD player_id, DWORD player_offset, DWORD is_away_team_goal, BYTE *player_info) {
+    DBG(32768) logu_("GOAL scored: player_id=%d, player_offset=0x%x (hex), is_away_team_goal=%d, player_info=%p\n",
+        player_id, player_offset, is_away_team_goal, player_info);
     if (_config->_lua_enabled) {
         // lua callbacks
         vector<module_t*>::iterator i;
         for (i = _modules.begin(); i != _modules.end(); i++) {
             module_t *m = *i;
-            module_goal_scored(m, player_id, (not_an_own_goal == 0), is_away_team_goal);
+            module_goal_scored(m, player_id, player_offset, is_away_team_goal, player_info);
         }
     }
 }
