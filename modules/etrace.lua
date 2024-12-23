@@ -67,15 +67,25 @@ function m.context_reset(ctx)
     tlog("context is reset")
 end
 
+function m.goal_scored(ctx, goal_info)
+    tlog("goal_scored: %s", t2s(goal_info))
+    if goal_info.home_or_away == 0 then
+        tlog("goal_scored: Player %s from team %s scored", goal_info.player_id, ctx.home_team)
+    else
+        tlog("goal_scored: Player %s from team %s scored", goal_info.player_id, ctx.away_team)
+    end
+end
+
+local image_path
 local opts = { image_width = 32, image_hmargin = 4, image_vmargin = 2 }
 function m.overlay_on(ctx)
     local memory_used = collectgarbage("count")
     local text = string.format("ctx: %s\nLua memory used: %d KB", t2s(ctx), memory_used)
-    local image_path = ctx.sider_dir .. "sider-icon.dds"
     return text, image_path, opts
 end
 
 function m.init(ctx)
+    image_path = ctx.sider_dir .. "sider-icon.dds"
     ctx.register("set_teams", m.set_teams)
     ctx.register("set_match_time", m.set_match_time)
     ctx.register("set_stadium_choice", m.set_stadium_choice)
@@ -89,6 +99,7 @@ function m.init(ctx)
     ctx.register("show", m.show)
     ctx.register("hide", m.hide)
     ctx.register("context_reset", m.context_reset)
+    ctx.register("goal_scored", m.goal_scored)
 end
 
 return m

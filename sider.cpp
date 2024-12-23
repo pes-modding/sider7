@@ -765,6 +765,10 @@ extern "C" void sider_custom_event_rbx_hk();
 
 extern "C" void sider_custom_event(uint16_t event_id, REGISTERS *regs);
 
+extern "C" void sider_goal_scored_hk();
+
+extern "C" void sider_goal_scored(DWORD player_id, DWORD not_an_own_goal, DWORD is_away);
+
 static DWORD dwThreadId;
 static DWORD hookingThreadId = 0;
 static HMODULE myHDLL;
@@ -1638,6 +1642,7 @@ struct module_t {
     int evt_context_reset;
     int evt_custom;
     int evt_display_frame;
+    int evt_goal_scored;
     custom_event_t *custom_events;
 };
 vector<module_t*> _modules;
@@ -2114,6 +2119,30 @@ bool module_trophy_rewrite(module_t *m, WORD tournament_id, WORD *new_tid)
         LeaveCriticalSection(&_cs);
     }
     return assigned;
+}
+
+void module_goal_scored(module_t *m, DWORD player_id, bool own_goal, int home_or_away)
+{
+    if (m->evt_goal_scored != 0) {
+        EnterCriticalSection(&_cs);
+        lua_pushvalue(m->L, m->evt_goal_scored);
+        lua_xmove(m->L, L, 1);
+        // push params
+        lua_pushvalue(L, 1); // ctx
+        lua_newtable(L);
+        lua_pushinteger(L, player_id);
+        lua_setfield(L, -2, "player_id");
+        lua_pushboolean(L, own_goal);
+        lua_setfield(L, -2, "own_goal");
+        lua_pushinteger(L, home_or_away);
+        lua_setfield(L, -2, "home_or_away");
+        if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
+            const char *err = luaL_checkstring(L, -1);
+            logu_("[%d] lua ERROR from module_goal_scored: %s\n",
+                GetCurrentThreadId(), err);
+        }
+        LeaveCriticalSection(&_cs);
+    }
 }
 
 void module_call_callback_with_context(lua_State *L, lua_State *from_L, int callback_index) {
@@ -4991,6 +5020,18 @@ void sider_custom_event(uint16_t event_id, REGISTERS *regs) {
     }
 }
 
+void sider_goal_scored(DWORD player_id, DWORD not_an_own_goal, DWORD is_away_team_goal) {
+    DBG(32768) logu_("GOAL scored: player_id=%d, not_an_own_goal=%d, is_away_team_goal=%d\n", player_id, not_an_own_goal, is_away_team_goal);
+    if (_config->_lua_enabled) {
+        // lua callbacks
+        vector<module_t*>::iterator i;
+        for (i = _modules.begin(); i != _modules.end(); i++) {
+            module_t *m = *i;
+            module_goal_scored(m, player_id, (not_an_own_goal == 0), is_away_team_goal);
+        }
+    }
+}
+
 void sider_free_select(BYTE *controller_restriction)
 {
     *controller_restriction = 0;
@@ -6101,6 +6142,12 @@ static int sider_context_register(lua_State *L)
         _curr_m->evt_get_stadium_name = lua_gettop(_curr_m->L);
         logu_("Registered for \"%s\" event\n", event_key);
     }
+    else if (strcmp(event_key, "goal_scored")==0) {
+        lua_pushvalue(L, -1);
+        lua_xmove(L, _curr_m->L, 1);
+        _curr_m->evt_goal_scored = lua_gettop(_curr_m->L);
+        logu_("Registered for \"%s\" event\n", event_key);
+    }
     else if (strncmp(event_key, "custom:", strlen("custom:"))==0) {
         // custom event
         lua_pushvalue(L, -1);
@@ -6868,7 +6915,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 41
+#define NUM_PATTERNS 42
     BYTE *frag[NUM_PATTERNS+1];
     frag[1] = lcpk_pattern_at_read_file;
     frag[2] = lcpk_pattern_at_get_size;
@@ -6911,6 +6958,7 @@ DWORD install_func(LPVOID thread_param) {
     frag[39] = pattern_game_lite;
     frag[40] = pattern_trophy_check2;
     frag[41] = pattern_set_edit_team_id;
+    frag[42] = pattern_goal_scored;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[1] = 24;
@@ -6975,6 +7023,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[39] = _config->_lua_enabled ? sizeof(pattern_game_lite)-1 : 0;
     frag_len[40] = _config->_lua_enabled ? sizeof(pattern_trophy_check2)-1 : 0;
     frag_len[41] = _config->_lua_enabled ? sizeof(pattern_set_edit_team_id)-1 : 0;
+    frag_len[42] = _config->_lua_enabled ? sizeof(pattern_goal_scored)-1 : 0;
 
     int offs[NUM_PATTERNS+1];
     offs[1] = lcpk_offs_at_read_file;
@@ -7018,6 +7067,7 @@ DWORD install_func(LPVOID thread_param) {
     offs[39] = offs_game_lite;
     offs[40] = offs_trophy_check2;
     offs[41] = offs_set_edit_team_id;
+    offs[42] = offs_goal_scored;
 
     BYTE **addrs[NUM_PATTERNS+1];
     addrs[1] = &_config->_hp_at_read_file;
@@ -7061,6 +7111,7 @@ DWORD install_func(LPVOID thread_param) {
     addrs[39] = &_config->_hp_at_game_lite;
     addrs[40] = &_config->_hp_at_trophy_check2;
     addrs[41] = &_config->_hp_at_set_edit_team_id;
+    addrs[42] = &_config->_hp_at_goal_scored;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -7185,6 +7236,7 @@ bool all_found(config_t *cfg) {
             cfg->_hp_at_clear_sc > 0 &&
             cfg->_hp_at_xinput > 0 &&
             (cfg->_hp_at_set_edit_team_id > 0 || cfg->_hp_at_game_lite > 0) &&
+            cfg->_hp_at_goal_scored > 0 &&
             true
         );
     }
@@ -7298,6 +7350,7 @@ bool hook_if_all_found() {
             log_(L"sider_data_ready: %p\n", sider_data_ready_hk);
             log_(L"call_to_move at: %p\n", _config->_hp_at_call_to_move);
             log_(L"sider_custom_event_rbx_hk: %p\n", sider_custom_event_rbx_hk);
+            log_(L"sider_goal_scored_hk: %p\n", sider_goal_scored_hk);
 
             if (_config->_hp_at_set_team_id) {
                 BYTE *check_addr = _config->_hp_at_set_team_id - offs_set_team_id + offs_check_set_team_id;
@@ -7392,6 +7445,21 @@ bool hook_if_all_found() {
 
             if (_config->_overlay_enabled && _config->_controller_input_blocking_enabled) {
                 HookXInputGetState();
+            }
+
+            // goal scored
+            int32_t offset = *(int32_t*)_config->_hp_at_goal_scored;
+            offset += goal_scored_calltarget_shift;
+            BYTE *calltarget = _config->_hp_at_goal_scored + 4 + offset;
+            log_(L"goal_scored: new calltarget: %p (at: %p)\n", calltarget, _config->_hp_at_goal_scored);
+
+            DWORD oldProt;
+            if (siderVirtualProtect(_config->_hp_at_goal_scored, 4, PAGE_EXECUTE_READWRITE, &oldProt)) {
+                memcpy(_config->_hp_at_goal_scored, &offset, 4);
+                hook_call_with_tail(calltarget, (BYTE*)sider_goal_scored_hk, goal_scored_tail, 2);
+            }
+            else {
+                log_(L"WARNING: unable to properly hook goal_scored event\n");
             }
 
             log_(L"-------------------------------\n");

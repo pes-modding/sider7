@@ -29,6 +29,7 @@ extern sider_loaded_uniparam:proc
 extern sider_clear_sc:proc
 extern sider_set_edit_team_id:proc
 extern sider_custom_event:proc
+extern sider_goal_scored:proc
 
 extern _sci:dq
 
@@ -775,5 +776,47 @@ restore_registers:
         ret
 
 sider_custom_event_rbx_hk endp
+
+sider_goal_scored_hk proc
+
+        push    r15
+        push    r14
+        push    r13
+        push    r12
+        push    r11
+        push    r10
+        push    r9
+        push    r8
+        push    rbp
+        push    rdi
+        push    rsi
+        push    rdx
+        push    rcx
+        push    rbx
+        pushfq
+        sub     rsp,28h
+        mov     r8,rdx    ; 3rd param: is_away_team_goal flag
+        mov     rdx,rcx   ; 2nd param: not_an_own_goal
+        mov     rcx,rbx   ; 1st param: player id
+        call    sider_goal_scored
+        add     rsp,28h
+        popfq
+        pop     rbx
+        pop     rcx
+        pop     rdx
+        pop     rsi
+        pop     rdi
+        pop     rbp
+        pop     r8
+        pop     r9
+        pop     r10
+        pop     r11
+        pop     r12
+        pop     r13
+        pop     r14
+        pop     r15
+        ret
+
+sider_goal_scored_hk endp
 
 end

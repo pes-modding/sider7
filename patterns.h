@@ -830,4 +830,62 @@ static BYTE pattern_set_edit_team_id[20] =
     "\xc7\x41\x20\x00\x00\x0d\x00";
 static int offs_set_edit_team_id = 0xb3 - 0x7d;
 
+/**
+0000000140478C3F | E8 7CA75E00                     | call pes2021.140A633C0                  | new goal scored / get player id
+0000000140478C44 | 8BD8                            | mov ebx,eax                             |
+0000000140478C46 | E8 65456000                     | call pes2021.140A7D1B0                  |
+0000000140478C4B | 48:8B90 38040000                | mov rdx,qword ptr ds:[rax+438]          |
+0000000140478C52 | 4C:8B42 08                      | mov r8,qword ptr ds:[rdx+8]             |
+0000000140478C56 | 48:8BCA                         | mov rcx,rdx                             |
+0000000140478C59 | 45:3870 19                      | cmp byte ptr ds:[r8+19],r14b            |
+0000000140478C5D | 75 19                           | jne pes2021.140478C78                   |
+**/
+static BYTE pattern_goal_scored[21] =
+    "\x48\x8b\x90\x38\x04\x00\x00"
+    "\x4c\x8b\x42\x08"
+    "\x48\x8b\xca"
+    "\x45\x38\x70\x19"
+    "\x75\x19";
+static int offs_goal_scored = -4;
+
+/**
+0000000140A7D1B0 | 48:83EC 38                      | sub rsp,38                              |
+0000000140A7D1B4 | 48:C74424 20 FEFFFFFF           | mov qword ptr ss:[rsp+20],FFFFFFFFFFFFF |
+0000000140A7D1BD | 48:8B05 3462C802                | mov rax,qword ptr ds:[1437033F8]        |
+0000000140A7D1C4 | 48:85C0                         | test rax,rax                            |
+0000000140A7D1C7 | 75 34                           | jne pes2021.140A7D1FD                   |
+0000000140A7D1C9 | C74424 40 19000000              | mov dword ptr ss:[rsp+40],19            |
+0000000140A7D1D1 | 45:33C0                         | xor r8d,r8d                             |
+0000000140A7D1D4 | BA 60040000                     | mov edx,460                             |
+0000000140A7D1D9 | 48:8D4C24 40                    | lea rcx,qword ptr ss:[rsp+40]           |
+0000000140A7D1DE | E8 7DE297FF                     | call pes2021.1403FB460                  |
+0000000140A7D1E3 | 48:894424 48                    | mov qword ptr ss:[rsp+48],rax           |
+0000000140A7D1E8 | 48:85C0                         | test rax,rax                            |
+0000000140A7D1EB | 74 09                           | je pes2021.140A7D1F6                    |
+0000000140A7D1ED | 48:8BC8                         | mov rcx,rax                             |
+0000000140A7D1F0 | E8 FBF9FFFF                     | call pes2021.140A7CBF0                  |
+0000000140A7D1F5 | 90                              | nop                                     |
+0000000140A7D1F6 | 48:8905 FB61C802                | mov qword ptr ds:[1437033F8],rax        |
+0000000140A7D1FD | 48:83C4 38                      | add rsp,38                              |
+0000000140A7D201 | C3                              | ret                                     |
+0000000140A7D202 | CC                              | int3                                    |
+0000000140A7D203 | CC                              | int3                                    |
+0000000140A7D204 | CC                              | int3                                    |
+0000000140A7D205 | CC                              | int3                                    |
+0000000140A7D206 | CC                              | int3                                    |
+0000000140A7D207 | CC                              | int3                                    |
+0000000140A7D208 | CC                              | int3                                    |
+0000000140A7D209 | CC                              | int3                                    |
+0000000140A7D20A | CC                              | int3                                    |
+0000000140A7D20B | CC                              | int3                                    |
+0000000140A7D20C | CC                              | int3                                    |
+0000000140A7D20D | CC                              | int3                                    |
+0000000140A7D20E | CC                              | int3                                    |
+0000000140A7D20F | CC                              | int3                                    |
+**/
+
+static int goal_scored_calltarget_shift = 0x202 - 0x1b0;
+
+static BYTE goal_scored_tail[3] = "\xeb\xa0"; // jump back to start of the 0x140A7D1B0 function
+
 #endif
