@@ -19,42 +19,8 @@ local function log_registers(registers)
     log("---------------------------------------")
 end
 
-local addr_1
-local addr_2
-local t_done = { rax = "\x01" }
-local t_continue = { rax = "\x00" }
-
 function m.check_eoh(ctx, event_id, registers)
-    log(string.format("custom:check_eoh: (event_id:%s, r8b:%s)", event_id, memory.hex(registers.r8:sub(1,1))))
-    local time_left
-    local stats = match.stats()
-    if not stats then
-        return t_continue
-    end
-    local minutes = stats.clock_minutes
-    local added = 0
-    if stats.added_minutes ~= nil then
-        added = stats.added_minutes
-    end
-
-    if registers.r8:sub(1,1) == '\x00' then
-        time_left = memory.unpack("f", memory.read(addr_1, 4))
-        if stats.period == 1 and minutes - added > 45 then
-            return t_done
-        end
-        if stats.period == 2 and minutes - added > 90 then
-            return t_done
-        end
-    else
-        time_left = memory.unpack("f", memory.read(addr_2, 4))
-        if stats.period == 3 and minutes - added > 105 then
-            return t_done
-        end
-        if stats.period == 4 and minutes - added > 120 then
-            return t_done
-        end
-    end
-    return t_continue
+    log(string.format("custom:check_eoh: (event_id:%s, r8b:%s, rax:%s)", event_id, memory.hex(registers.r8:sub(1,1)), memory.hex(registers.rax)))
 end
 
 function m.goal_scored(ctx, event_id, registers)
@@ -85,9 +51,9 @@ local function setup_end_of_half(ctx, event_name)
     addr = addr - 0x57 + 0x4a
     log("code location: " .. memory.hex(addr))
 
-    -- remember addrs for later logic
-    addr_1 = addr + 0x57 - 0x4a + memory.unpack("i32", memory.read(addr + 0x57 - 0x4a - 4, 4))
-    addr_2 = addr + 0x6a - 0x4a + memory.unpack("i32", memory.read(addr + 0x6a - 0x4a - 4, 4))
+    -- determine addrs that hold the floats that we will copy later
+    local addr_1 = addr + 0x57 - 0x4a + memory.unpack("i32", memory.read(addr + 0x57 - 0x4a - 4, 4))
+    local addr_2 = addr + 0x6a - 0x4a + memory.unpack("i32", memory.read(addr + 0x6a - 0x4a - 4, 4))
     log("addr_1: " .. memory.hex(addr_1))
     log("addr_2: " .. memory.hex(addr_2))
 
@@ -96,17 +62,39 @@ local function setup_end_of_half(ctx, event_name)
     log(string.format("event_id: %d", event_id))
 
     -- put event trigger into codecave
-    local codecave = memory.allocate_codecave(64)
+    local codecave = memory.allocate_codecave(128)
     log("codecave allocated at: " .. memory.hex(codecave))
+
+    -- we will place the values in the codecave too: right after code
+    local new_offset_1 = 0x3b
+    local new_offset_2 = 0x23
+
     memory.write(codecave,
+        "\x45\x84\xc0" ..                                          -- test r8b,r8b
+        "\x75\x14" ..                                              -- jne extra_time
+        "\xf3\x0f\x10\x05" .. memory.pack("i32", new_offset_1) ..  -- movss xmm0,dword ptr [addr_1]
+        "\xf3\x0f\x58\xc2" ..                                      -- adss xmm0,xmm2
+        "\x0f\x2f\xd8" ..                                          -- comiss xmm3,xmm0
+        "\x0f\x93\xc0" ..                                          -- setae al
+        "\xeb\x12"     ..                                          -- jmp trigger
+                                                        -- extra_time:
+        "\xf3\x0f\x10\x05" .. memory.pack("i32", new_offset_2) ..  -- movss xmm0,dword ptr [addr_2]
+        "\xf3\x0f\x58\xc2" ..                                      -- adss xmm0,xmm2
+        "\x0f\x2f\xd8" ..                                          -- comiss xmm3,xmm0
+        "\x0f\x93\xc0" ..                                          -- setae al
+                                                         -- trigger:
         "\x53" ..                                                -- push rbx
         "\x51" ..                                                -- push rcx
-        "\x48\xbb" .. memory.pack("u64", ctx.custom_evt_rbx) ..  -- mov rbx, <sider_custom_event_rbx_hk>
-        "\x66\xb9" .. memory.pack("u16", event_id) ..            -- mov cx, <event_id>
+        "\x48\xbb" .. memory.pack("u64", ctx.custom_evt_rbx) ..  -- mov rbx,<sider_custom_event_rbx_hk>
+        "\x66\xb9" .. memory.pack("u16", event_id) ..            -- mov cx,<event_id>
         "\xff\xd3" ..                                            -- call rbx
         "\x48\x83\xc4\x10" ..                                    -- add rsp,10h
         "\xc3"                                                   -- ret
     )
+    -- copy 2 floats to codecave, so that we can access them easier
+    -- (without far-addressing)
+    memory.write(codecave + 0x48, memory.read(addr_1, 4))
+    memory.write(codecave + 0x44, memory.read(addr_2, 4))
 
     -- connect event trigger with place in the game code
     -- 1. put an indirect jump instruction using that addr that just folllows

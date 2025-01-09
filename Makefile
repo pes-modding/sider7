@@ -25,8 +25,8 @@ CFLAGS=/nologo /Od /EHsc /wd4731 /MT /D_WIN32_WINNT=0x601 $(EXTRA_CFLAGS)
 LFLAGS=/NOLOGO /DEFAULTLIB:"LIBCMT"
 LIBS=user32.lib gdi32.lib comctl32.lib version.lib ole32.lib shell32.lib psapi.lib
 
-LUAINC=/I soft\LuaJIT-2.1\src
-LUALIBPATH=soft\LuaJIT-2.1\src
+LUAINC=/I soft\LuaJIT-2.1.0-beta3\src
+LUALIBPATH=soft\LuaJIT-2.1.0-beta3\src
 LUALIB=lua51.lib
 LUADLL=lua51.dll
 LUAJIT=luajit.exe
@@ -71,7 +71,7 @@ $(LPZLIB)\$(ZLIBLIB):
     cd $(LPZLIB) && nmake -f win32\Makefile.msc
 
 $(LUALIBPATH)\$(LUALIB):
-	cd $(LUALIBPATH) && msvcbuild.bat static
+	cd $(LUALIBPATH) && msvcbuild.bat gc64 static
 
 $(FW1LIBPATH)\$(FW1LIB):
 	cd $(FW1LIBROOT)\Source && nmake -f ..\Makefile
