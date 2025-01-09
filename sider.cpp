@@ -6376,6 +6376,16 @@ void init_lua_support()
         L = luaL_newstate();
         luaL_openlibs(L);
 
+        // print JIT version
+        if (_config->_jit_enabled) {
+            lua_getglobal(L, "jit");
+            lua_getfield(L, -1, "version");
+            size_t version_len;
+            const char *version = luaL_checklstring(L, -1, &version_len);
+            logu_("jit.version: %s\n", version);
+            lua_pop(L, 2);
+        }
+
         // prepare context table
         push_context_table(L);
 
