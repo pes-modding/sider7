@@ -3,7 +3,7 @@
 local m = {}
 
 function m.init(ctx)
-    log(string.format("jit: %s", jit))
+    log(string.format("jit: %s, version: %s", jit, jit.version))
     if jit then
         local info = {}
         for i,v in ipairs({jit.status()}) do
