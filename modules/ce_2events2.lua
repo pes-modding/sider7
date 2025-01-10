@@ -19,13 +19,55 @@ local function log_registers(registers)
     log("---------------------------------------")
 end
 
+local ACTION_KEY = { 0x35, "[5]" }
+local forcefully_end
+function m.key_up(ctx, vkey)
+    if vkey == ACTION_KEY[1] then
+        forcefully_end = true
+        log(string.format("triggering end of half: forcefully_end = true"))
+    end
+end
+
+local old_al
+local last_xmm3
 function m.check_eoh(ctx, event_id, registers)
-    log(string.format("custom:check_eoh: (event_id:%s, r8b:%s, rax:%s)", event_id, memory.hex(registers.r8:sub(1,1)), memory.hex(registers.rax)))
+    local al = registers.rax:sub(1,1)
+    if old_al ~= al then
+        log(string.format("custom:check_eoh: (event_id:%s, r8b:%s, al:%s)", event_id, memory.hex(registers.r8:sub(1,1)), memory.hex(al)))
+    end
+    old_al = al
+
+    --[[
+    log(string.format("xmm0 = %s, xmm2 = %s, xmm3 = %s",
+        memory.unpack("f", registers.xmm0:sub(1,4)),
+        memory.unpack("f", registers.xmm2:sub(1,4)),
+        memory.unpack("f", registers.xmm3:sub(1,4))
+    ))
+    --]]
+
+    if forcefully_end then
+        -- check if new half started
+        local xmm3 = memory.unpack("f", registers.xmm3:sub(1,4))
+        if xmm3 < 1000 then
+            -- new half started: we need to reset our flag
+            forcefully_end = nil
+            log(string.format("custom:check_eoh: new half started: xmm3 = %s", xmm3))
+            log(string.format("custom:check_eof: forcefully_end = nil"))
+        else
+            -- send AL = 1 to end the half
+            log(string.format("custon:check_eoh: returning rax:%s", memory.hex(memory.pack("u64",1))))
+            return { rax = memory.pack("u64", 1) }
+        end
+    end
 end
 
 function m.goal_scored(ctx, event_id, registers)
     log(string.format("custom:goal_scored: (event_id:%s, registers:%s)", event_id, registers))
     log_registers(registers)
+end
+
+function m.overlay_on(ctx)
+    return string.format("%s - to end current period of play", ACTION_KEY[2])
 end
 
 local function setup_end_of_half(ctx, event_name)
@@ -200,6 +242,9 @@ function m.init(ctx)
     -- register for custom events
     ctx.register("custom:check_end_of_half", m.check_eoh)
     ctx.register("custom:goal_scored", m.goal_scored)
+
+    ctx.register("overlay_on", m.overlay_on)
+    ctx.register("key_up", m.key_up)
 end
 
 return m
