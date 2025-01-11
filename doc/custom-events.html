@@ -62,7 +62,7 @@ i can go into here, but if you feel lost and confused, don't lose heart: things 
 not as difficult as they look, once you start digging in.</p>
 
 <p>We will be working with assembly language and even sometimes directly
-wich machine code instructions, as well as Lua on the other side. It can be a very exciting
+with machine code instructions, as well as Lua on the other side. It can be a very exciting
 and rewarding experience, but also very frustrating, when things do not work right away.
 This is a rather wild mix of high level and very low level programming, so be prepared to be patient
 and not allow the frustration of crashes and bugs to get the better of you ;)</p>
@@ -296,20 +296,40 @@ Well, not really, but hopefully this guide gives you a good starting point on ho
 
 <h4>13.5 Example modules</h4>
 
-<p>Included with sider are two example modules: <span class="file">customevt1.lua</span> and <span class="file">customevt2.lua</span></p>
+<p>Included with sider are several example modules</p>
 
-<p>The first one - customevt1.lua - is essentially the complete module that puts together all the code snippets and concepts that
+<p>The first one - <b>customevt1.lua</b> - is essentially the complete module that puts together all the code snippets and concepts that
 were discussed above in this guide into a working module that both generates a custom event and also handles it. The event generator
 triggers an event called "<b>custom:check_end_of_half</b>", when the game actually checks if the half is over or not yet. Then event
 handler modifies <b>rax</b> register to set its lowest 8 bits ("AL") to 1, which tells the game that the half is over. So, basically,
 as soon as each half of the match starts, it pretty much finishes right away. Yes, I know, it is not very useful... but it
 demonstrates how custom events work.</p>
 
-<p>The second one - customevt2.lua - works pretty much exactly the same way: short-circuits each half of the match. The only difference
+<p>The second one - <b>customevt2.lua</b> - works pretty much exactly the same way: short-circuits each half of the match. The only difference
 is that it uses yet another technique, when patching the game process with the event generator code: it allocates a new code page in the
 process memory - using new <b>memory.allocate_codecave</b> function, puts the event generator code there, then does an indirect jump to
 that address. This is useful, when you don't have too many bytes to work with in the original location and you want as small of a
 footprint as possible for a jump out to the event generator code.</p>
+
+<p>Then there is a pair of modules: <b>customevt3_setup.lua</b> and <b>customevt3_use.lua</b></p>
+
+<p>These two show how one module can set up an event generator, but another module can use that custom event. Also, with this example,
+i modified the event generator code so that the "check_end_of_half" event is little more useful: the original logic of deciding whether the time has
+run out for a current half is preserved, but the handler now has a choice of:
+<ul>
+<li>not returning anything, in which case the game flows normally</li>
+<li>returning a table with "rax" register set to 1 - to "request" an early termination to the half. The half should end as soon the
+ball goes out of play, or is near the center circle</li>
+</ul>
+The <b>customevt3_use.lua</b> shows how to implement such logic using a hotkey from the module overlay.</b>
+</p>
+
+<p>To use those two - make sure you register them both in your <b>sider.ini</b> (the order does not matter):<br />
+<pre>
+lua.module = "customevt3_use.lua"
+lua.module = "customevt3_setup.lua"
+</pre>
+</p>
 
 <hr/>
 <p>

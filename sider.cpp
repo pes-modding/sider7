@@ -1589,6 +1589,7 @@ int _rewrite_count(0);
 
 struct custom_event_t {
     uint16_t event_id;
+    int evt_custom;
     struct custom_event_t *next;
 };
 
@@ -1640,7 +1641,6 @@ struct module_t {
     int evt_show;
     int evt_hide;
     int evt_context_reset;
-    int evt_custom;
     int evt_display_frame;
     int evt_goal_scored;
     custom_event_t *custom_events;
@@ -2399,35 +2399,33 @@ void module_context_reset(module_t *m)
     }
 }
 
-void module_custom_event(module_t *m, uint16_t param, REGISTERS *regs)
+void module_custom_event(module_t *m, custom_event_t *ce, REGISTERS *regs)
 {
-    if (m->evt_custom != 0) {
-        EnterCriticalSection(&_cs);
-        //log_(L"module_custom_event for: %s\n", m->filename->c_str());
-        lua_pushvalue(m->L, m->evt_custom);
-        lua_xmove(m->L, L, 1);
-        // push params
-        lua_pushvalue(L, 1); // ctx
-        lua_pushinteger(L, param);
-        lua_newtable(L); // registers
-        //log_(L"regs: %p\n", regs);
-        registers_to_lua_table(L, -1, regs);
-        //log_(L"module_custom_event: registers copied to table\n");
+    EnterCriticalSection(&_cs);
+    //log_(L"module_custom_event for: %s\n", m->filename->c_str());
+    lua_pushvalue(m->L, ce->evt_custom);
+    lua_xmove(m->L, L, 1);
+    // push params
+    lua_pushvalue(L, 1); // ctx
+    lua_pushinteger(L, ce->event_id);
+    lua_newtable(L); // registers
+    //log_(L"regs: %p\n", regs);
+    registers_to_lua_table(L, -1, regs);
+    //log_(L"module_custom_event: registers copied to table\n");
 
-        if (lua_pcall(L, 3, 1, 0) != LUA_OK) {
-            const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR from module_custom_event: %s\n", GetCurrentThreadId(), err);
-            lua_pop(L, 1);
-            LeaveCriticalSection(&_cs);
-            return;
-        }
-        //log_(L"module_custom_event: lua_pcall returned\n");
-        if (lua_istable(L, -1)) {
-            // registers
-            registers_from_lua_table(L, -1, regs);
-        }
+    if (lua_pcall(L, 3, 1, 0) != LUA_OK) {
+        const char *err = luaL_checkstring(L, -1);
+        logu_("[%d] lua ERROR from module_custom_event: %s\n", GetCurrentThreadId(), err);
+        lua_pop(L, 1);
         LeaveCriticalSection(&_cs);
+        return;
     }
+    //log_(L"module_custom_event: lua_pcall returned\n");
+    if (lua_istable(L, -1)) {
+        // registers
+        registers_from_lua_table(L, -1, regs);
+    }
+    LeaveCriticalSection(&_cs);
 }
 
 void module_set_teams(module_t *m, DWORD home, DWORD away) //, TEAM_INFO_STRUCT *home_team_info, TEAM_INFO_STRUCT *away_team_info)
@@ -5013,7 +5011,7 @@ void sider_custom_event(uint16_t event_id, REGISTERS *regs) {
             custom_event_t *p = (*i)->custom_events;
             while (p) {
                 if (p->event_id == event_id) {
-                    module_custom_event(*i, event_id, regs);
+                    module_custom_event(*i, p, regs);
                     break;
                 }
                 p = p->next;
@@ -6155,13 +6153,14 @@ static int sider_context_register(lua_State *L)
         // custom event
         lua_pushvalue(L, -1);
         lua_xmove(L, _curr_m->L, 1);
-        _curr_m->evt_custom = lua_gettop(_curr_m->L);
+        int stack_pos = lua_gettop(_curr_m->L);
 
         // keep track of which custom events this module is registered for
         uint16_t event_id = get_event_id_for_name(event_key);
         if (_curr_m->custom_events == NULL) {
             _curr_m->custom_events = new custom_event_t();
             memset(_curr_m->custom_events, 0, sizeof(struct custom_event_t));
+            _curr_m->custom_events->evt_custom = stack_pos;
             _curr_m->custom_events->event_id = event_id;
         }
         else {
@@ -6169,6 +6168,7 @@ static int sider_context_register(lua_State *L)
             while (p->next) { p = p->next; }
             custom_event_t *q = new custom_event_t();
             memset(q, 0, sizeof(struct custom_event_t));
+            q->evt_custom = stack_pos;
             q->event_id = event_id;
             p->next = q;
         }
@@ -6425,6 +6425,16 @@ void init_lua_support()
         // load and initialize lua modules
         L = luaL_newstate();
         luaL_openlibs(L);
+
+        // print JIT version
+        if (_config->_jit_enabled) {
+            lua_getglobal(L, "jit");
+            lua_getfield(L, -1, "version");
+            size_t version_len;
+            const char *version = luaL_checklstring(L, -1, &version_len);
+            logu_("jit.version: %s\n", version);
+            lua_pop(L, 2);
+        }
 
         // prepare context table
         push_context_table(L);
