@@ -2,6 +2,12 @@ Sider 7 Release History
 =======================
 
 
+January 10, 2025
+v7.3.2
+- correction for custom events logic: fixed the bug with wrong event handlers called
+- going back to LuaJIT 2.1.0-beta3, because strange keyboard problems were reported with newer version
+
+
 November 28, 2024
 v7.3.1
 - fixed issues with launching custom EXE files using "start.game" option in sider.ini

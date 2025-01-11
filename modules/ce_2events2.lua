@@ -29,7 +29,6 @@ function m.key_up(ctx, vkey)
 end
 
 local old_al
-local last_xmm3
 function m.check_eoh(ctx, event_id, registers)
     local al = registers.rax:sub(1,1)
     if old_al ~= al then
@@ -48,7 +47,7 @@ function m.check_eoh(ctx, event_id, registers)
     if forcefully_end then
         -- check if new half started
         local xmm3 = memory.unpack("f", registers.xmm3:sub(1,4))
-        if xmm3 < 1000 then
+        if xmm3 <= 100 then
             -- new half started: we need to reset our flag
             forcefully_end = nil
             log(string.format("custom:check_eoh: new half started: xmm3 = %s", xmm3))
