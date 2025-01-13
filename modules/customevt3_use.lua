@@ -12,7 +12,6 @@ function m.key_up(ctx, vkey)
 end
 
 function m.check_eoh(ctx, event_id, registers)
-    last_registers = registers
     local al = registers.rax:sub(1,1)
     if old_al ~= al then
         -- do not spam the log. print only when AL changes
