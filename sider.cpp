@@ -2394,6 +2394,7 @@ void module_custom_event(module_t *m, custom_event_t *ce, REGISTERS *regs)
         // registers
         registers_from_lua_table(L, -1, regs);
     }
+    lua_pop(L, 1);
     LeaveCriticalSection(&_cs);
 }
 
