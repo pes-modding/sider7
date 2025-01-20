@@ -2,6 +2,7 @@ local m = {}
 
 local ACTION_KEY = { 0x35, "[5]" }
 local forcefully_end
+local last_xmm3
 local old_al
 
 function m.key_up(ctx, vkey)
@@ -21,11 +22,13 @@ function m.check_eoh(ctx, event_id, registers)
 
     if forcefully_end then
         local xmm3 = memory.unpack("f", registers.xmm3:sub(1,4))
-        if xmm3 <= 100 then
+        if xmm3 == 0 or last_xmm3 == nil or last_xmm3 > xmm3 then
             -- new period started
             log(string.format("custom:check_eoh: new time period started (xmm3: %s): forcefully_end = nil", xmm3))
             forcefully_end = nil
+            last_xmm3 = xmm3
         else
+            last_xmm3 = xmm3
             -- send AL = 1 to end the half
             log(string.format("custon:check_eoh: returning rax:%s (xmm3: %s)", memory.hex(memory.pack("u64",1)), xmm3))
             return { rax = memory.pack("u64", 1) }
