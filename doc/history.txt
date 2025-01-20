@@ -2,7 +2,7 @@ Sider 7 Release History
 =======================
 
 
-January 13, 2025
+January 19, 2025
 v7.3.3
 - fixing memory leak in custom events
 
