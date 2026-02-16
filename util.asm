@@ -37,13 +37,16 @@ extern _sci:dq
 sider_read_file_hk proc
 
         mov     rax,[rsp+28h]
-        sub     rsp,38h
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp,30h
         mov     [rsp+20h],rax
         mov     rax,[r9+20h]
         mov     [rsp+28h],rax
         call    sider_read_file
-        ;mov     r12,[rsp+28h]
-        add     rsp,38h
+        mov     rsp, rbp
+        pop     rbp
         ret
 
 sider_read_file_hk endp
@@ -54,7 +57,13 @@ sider_get_size_hk proc
         mov     [rsp+20h],rdx
         mov     rcx,rsi
         mov     rdx,rbx
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_get_size
+        mov     rsp, rbp
+        pop     rbp
         mov     rcx,qword ptr [rdi+1d0h]
         mov     eax,1
         mov     rdx,[rsp+20h]
@@ -75,12 +84,17 @@ sider_extend_cpk_hk endp
 
 sider_mem_copy_hk proc
 
-        push    rsp
-        sub     rsp,20h
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp,30h
+        lea     rax, [rbp+8]
+        mov     [rsp+20h], rax
         mov     rcx,r11
         call    sider_mem_copy
         mov     qword ptr [rdi+10h],rbx
-        add     rsp,28h
+        mov     rsp, rbp
+        pop     rbp
         ret
 
 sider_mem_copy_hk endp
@@ -89,7 +103,13 @@ sider_lookup_file_hk proc
 
         push    rax
         sub     rsp,20h
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_lookup_file
+        mov     rsp, rbp
+        pop     rbp
         lea     rcx,qword ptr [rdi+108h]
         mov     r8,rsi
         lea     rdx,qword ptr [rsp+50h]
@@ -124,7 +144,13 @@ sider_set_team_id_hk proc
         add     rcx,r8
         mov     [rsp+20h],rcx
         mov     [rsp+28h],r8
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_set_team_id
+        mov     rsp, rbp
+        pop     rbp
         mov     rcx,[rsp+20h]
         mov     r8,[rsp+28h]
         mov     rax,[rsp+30h]
@@ -153,7 +179,13 @@ sider_set_settings_hk proc
         sub     rsp,20h
         mov     rax,qword ptr [rdx+98h]
         mov     qword ptr [rcx+98h],rax
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_set_settings
+        mov     rsp, rbp
+        pop     rbp
         add     rsp,20h
         pop     r11
         pop     r10
@@ -176,7 +208,13 @@ sider_trophy_check_hk proc
         push    rax
         sub     rsp,20h
         mov     ecx,dword ptr [rbx+498h]
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_trophy_check
+        mov     rsp, rbp
+        pop     rbp
         mov     ecx,eax
         and     r14b,1
         sar     ebp,1
@@ -200,7 +238,13 @@ sider_trophy_check2_hk proc
         push    rax
         sub     rsp,20h
         mov     ecx,dword ptr [rbx+498h]
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_trophy_check
+        mov     rsp, rbp
+        pop     rbp
         mov     ecx,eax
         mov     dword ptr [rdi+5170h],ecx
         add     rsp,20h
@@ -220,7 +264,13 @@ sider_context_reset_hk proc
         sub     rsp,28h
         mov     qword ptr [rbx+84h],rcx
         mov     qword ptr [rbx+201c4h],0ffffffffh
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_context_reset
+        mov     rsp, rbp
+        pop     rbp
         add     rsp,28h
         pop     r11
         pop     r10
@@ -239,7 +289,13 @@ sider_free_select_hk proc
         movsd   xmm0,qword ptr [rax]
         movsd   qword ptr [rbx+0a8h],xmm0
         lea     rcx,[rbx+0a8h]
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_free_select
+        mov     rsp, rbp
+        pop     rbp
         add     rsp,20h
         pop     rax
         ret
@@ -255,7 +311,13 @@ sider_trophy_table_hk proc
         mov     rsi,qword ptr [r11+38h]
         mov     rdi,qword ptr [r11+40h]
         lea     rcx,[rsp+40h]
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_trophy_table
+        mov     rsp, rbp
+        pop     rbp
         add     rsp,28h
         pop     r11
         pop     rax
@@ -275,7 +337,13 @@ sider_ball_name_hk proc
         mov     [rsp+20h],rcx
         mov     [rsp+28h],rdx
         mov     rcx,rdx
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_ball_name
+        mov     rsp, rbp
+        pop     rbp
         mov     rdx,rax
         mov     rcx,[rsp+20h]
         or      r8,0ffffffffffffffffh
@@ -305,7 +373,13 @@ sider_stadium_name_hk proc
         push    r9
         mov     r8,rdi
         mov     r9,rbx
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_stadium_name
+        mov     rsp, rbp
+        pop     rbp
         pop     r9
         pop     r8
         mov     rdx,rax
@@ -341,7 +415,13 @@ sider_def_stadium_name_hk proc
         push    r10
         push    r11
         sub     rsp,28h
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_def_stadium_name
+        mov     rsp, rbp
+        pop     rbp
         add     rsp,28h
         pop     r11
         pop     r10
@@ -362,7 +442,13 @@ sider_set_stadium_choice_hk proc
         push    r10
         push    r11
         sub     rsp,28h   ; we get here via jmp, but stack still needs correct alignment
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_set_stadium_choice
+        mov     rsp, rbp
+        pop     rbp
         add     rsp,28h
         pop     r11
         pop     r10
@@ -390,7 +476,13 @@ sider_check_kit_choice_hk proc
         sub     rsp,28h
         mov     rcx,r14   ;mis - match info struct
         mov     rdx,r10   ;0/1 - home/away
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_check_kit_choice
+        mov     rsp, rbp
+        pop     rbp
         add     rsp,28h
         pop     r14
         mov     byte ptr [r13-2],1
@@ -425,7 +517,13 @@ sider_data_ready_hk proc
         push    r11
         sub     rsp,20h   ; we get here via jmp, so stack already aligned
         mov     rcx,rbx   ; buffer structure
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_data_ready
+        mov     rsp, rbp
+        pop     rbp
         add     rsp,20h
         pop     r11
         pop     r10
@@ -457,7 +555,13 @@ sider_kit_status_hk proc
         sub     rsp,28h
         mov     rcx,rbx
         mov     rdx,rax
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_kit_status
+        mov     rsp, rbp
+        pop     rbp
         movzx   r9d, byte ptr [rbx+4ah]
         movzx   r8d, byte ptr [rbx+49h]
         movzx   rdx, byte ptr [rbx+48h]
@@ -487,7 +591,13 @@ sider_set_team_for_kits_hk proc
         xor     edx,eax
         mov     dword ptr [r9],edx
         mov     rcx,rbx
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_set_team_for_kits
+        mov     rsp, rbp
+        pop     rbp
         mov     rcx,3fffh
         add     rsp,28h
         pop     r11
@@ -515,7 +625,13 @@ sider_clear_team_for_kits_hk proc
         mov     dword ptr [rdx+18h],0ffffh
         mov     dword ptr [rdx+30h],0ffffffffh
         mov     rcx,rbx
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_clear_team_for_kits
+        mov     rsp, rbp
+        pop     rbp
         mov     rax,3fffh
         add     rsp,28h
         pop     r11
@@ -542,7 +658,13 @@ sider_loaded_uniparam_hk proc
         push    r11
         sub     rsp,28h
         mov     rcx,rax
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_loaded_uniparam
+        mov     rsp, rbp
+        pop     rbp
         mov     [rsi+48h],rax
         add     rsp,28h
         pop     r11
@@ -588,7 +710,13 @@ sider_clear_sc_hk proc
         push    r11
         sub     rsp,28h
         mov     rcx,r14
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_clear_sc
+        mov     rsp, rbp
+        pop     rbp
         add     rsp,28h
         pop     r11
         pop     r10
@@ -633,7 +761,13 @@ sider_set_edit_team_id_hk proc
         sub     rsp,28h
         mov     rcx,r8
         and     rcx,0ffffffffh
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_set_edit_team_id
+        mov     rsp, rbp
+        pop     rbp
         mov     al,1
         add     rsp,28h
         pop     r11
@@ -799,7 +933,13 @@ sider_goal_scored_hk proc
         mov     r8,rdx    ; 3rd param: is_away_team_goal flag
         mov     rdx,rcx   ; 2nd param: not_an_own_goal
         mov     rcx,rbx   ; 1st param: player id
+        push    rbp
+        mov     rbp, rsp
+        and     rsp, -10h
+        sub     rsp, 20h
         call    sider_goal_scored
+        mov     rsp, rbp
+        pop     rbp
         add     rsp,28h
         popfq
         pop     rbx
