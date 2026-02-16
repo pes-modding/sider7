@@ -2,6 +2,12 @@ Sider 7 Release History
 =======================
 
 
+February 16, 2026
+v7.3.4
+- fixes for stack alignment, needed to run on Windows 11 with patched games
+  Thanks to Mohamed2746.
+
+
 January 19, 2025
 v7.3.3
 - fixing memory leak in custom events
