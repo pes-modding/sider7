@@ -402,8 +402,16 @@ BYTE* get_target_location(BYTE *call_location);
 BYTE* get_target_location2(BYTE *rel_offs_location);
 void HookXInputGetState();
 
+void hook_indirect_call(BYTE *loc, BYTE *p);
+
 LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK sider_foreground_idle_proc(int code, WPARAM wParam, LPARAM lParam);
+
+typedef HANDLE (*PFN_CreateFileW)(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
+PFN_CreateFileW _org_CreateFileW;
+HANDLE sider_CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
 
 typedef HRESULT (*PFN_CreateDXGIFactory1)(REFIID riid, void **ppFactory);
 typedef HRESULT (*PFN_IDXGIFactory1_CreateSwapChain)(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_SWAP_CHAIN_DESC *pDesc, IDXGISwapChain **ppSwapChain);
@@ -4504,6 +4512,14 @@ HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_S
     return hr;
 }
 
+HANDLE sider_CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+{
+    HANDLE result = CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    log_(L"sider_CreateFileW:: called for {%s} --> result: %p\n", lpFileName, result);
+    return result;
+}
+
 HRESULT sider_CreateDXGIFactory1(REFIID riid, void **ppFactory)
 {
     HRESULT hr = _org_CreateDXGIFactory1(riid, ppFactory);
@@ -5286,7 +5302,7 @@ BYTE* get_target_location(BYTE *call_location)
             // get memory location where call target addr is stored
             // format of indirect call is like this:
             // call [addr] : FF 15 <4-byte-offset>
-            DWORD* ptr = (DWORD*)(call_location + 2);
+            int32_t* ptr = (int32_t*)(call_location + 2);
             VirtualProtect(bptr, 8, protection, &newProtection);
             return call_location + 6 + ptr[0];
         }
@@ -5297,7 +5313,7 @@ BYTE* get_target_location(BYTE *call_location)
 BYTE* get_target_location2(BYTE *rel_offs_location)
 {
     if (rel_offs_location) {
-        DWORD* ptr = (DWORD*)(rel_offs_location);
+        int32_t* ptr = (int32_t*)(rel_offs_location);
         return rel_offs_location + 4 + ptr[0];
     }
     return NULL;
@@ -6929,7 +6945,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 42
+#define NUM_PATTERNS 43
     BYTE *frag[NUM_PATTERNS+1];
     frag[1] = lcpk_pattern_at_read_file;
     frag[2] = lcpk_pattern_at_get_size;
@@ -6973,6 +6989,7 @@ DWORD install_func(LPVOID thread_param) {
     frag[40] = pattern_trophy_check2;
     frag[41] = pattern_set_edit_team_id;
     frag[42] = pattern_goal_scored;
+    frag[43] = pattern_createfilew;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[1] = 24;
@@ -7038,6 +7055,7 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[40] = _config->_lua_enabled ? sizeof(pattern_trophy_check2)-1 : 0;
     frag_len[41] = _config->_lua_enabled ? sizeof(pattern_set_edit_team_id)-1 : 0;
     frag_len[42] = _config->_lua_enabled ? sizeof(pattern_goal_scored)-1 : 0;
+    frag_len[43] = sizeof(pattern_createfilew)-1;
 
     int offs[NUM_PATTERNS+1];
     offs[1] = lcpk_offs_at_read_file;
@@ -7082,6 +7100,7 @@ DWORD install_func(LPVOID thread_param) {
     offs[40] = offs_trophy_check2;
     offs[41] = offs_set_edit_team_id;
     offs[42] = offs_goal_scored;
+    offs[43] = offs_createfilew;
 
     BYTE **addrs[NUM_PATTERNS+1];
     addrs[1] = &_config->_hp_at_read_file;
@@ -7126,6 +7145,7 @@ DWORD install_func(LPVOID thread_param) {
     addrs[40] = &_config->_hp_at_trophy_check2;
     addrs[41] = &_config->_hp_at_set_edit_team_id;
     addrs[42] = &_config->_hp_at_goal_scored;
+    addrs[43] = &_config->_hp_at_createfilew;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -7262,7 +7282,8 @@ bool all_found(config_t *cfg) {
         );
     }
     all = all && (
-        cfg->_hp_at_dxgi > 0
+        cfg->_hp_at_dxgi > 0 &&
+        cfg->_hp_at_createfilew > 0
     );
     if (cfg->_free_side_select) {
         all = all && (
@@ -7346,6 +7367,9 @@ bool hook_if_all_found() {
             _org_CreateDXGIFactory1 = *(PFN_CreateDXGIFactory1*)loc;
             logu_("_org_CreateDXGIFactory1: %p\n", _org_CreateDXGIFactory1);
             hook_indirect_call(addr, (BYTE*)sider_CreateDXGIFactory1);
+        }
+        if (_config->_hp_at_createfilew) {
+            hook_indirect_call(_config->_hp_at_createfilew, (BYTE*)sider_CreateFileW);
         }
 
         if (_config->_lua_enabled) {

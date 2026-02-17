@@ -888,4 +888,20 @@ static int goal_scored_calltarget_shift = 0x202 - 0x1b0;
 
 static BYTE goal_scored_tail[3] = "\xeb\xa0"; // jump back to start of the 0x140A7D1B0 function
 
+/**
+000000014140E490 | 0FB782 3C300100                 | movzx eax,word ptr ds:[rdx+1303C]       |
+000000014140E497 | 66:894424 50                    | mov word ptr ss:[rsp+50],ax             |
+000000014140E49C | 0FB682 3E300100                 | movzx eax,byte ptr ds:[rdx+1303E]       |
+000000014140E4A3 | BA 00000040                     | mov edx,40000000                        |
+000000014140E4A8 | 884424 52                       | mov byte ptr ss:[rsp+52],al             |
+000000014140E4AC | FF15 CE0D1201                   | call qword ptr ds:[<&CreateFileW>]      |
+**/
+static BYTE pattern_createfilew[] =
+    "\x0f\xb7\x82\x3c\x30\x01\x00"
+    "\x66\x89\x44\x24\x50"
+    "\x0f\xb6\x82\x3e\x30\x01\x00"
+    "\xba\x00\x00\x00\x40"
+    "\x88\x44\x24\x52";
+static int offs_createfilew = 0xac - 0x90;
+
 #endif

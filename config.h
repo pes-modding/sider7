@@ -111,6 +111,7 @@ public:
     BYTE *_hp_at_xinput;
     BYTE *_hp_at_set_edit_team_id;
     BYTE *_hp_at_goal_scored;
+    BYTE *_hp_at_createfilew;
 
     BYTE *_hp_at_set_min_time;
     BYTE *_hp_at_set_max_time;
@@ -198,6 +199,7 @@ public:
                  _hp_at_def_stadium_name(NULL),
                  _hp_at_dxgi(NULL),
                  _hp_at_goal_scored(NULL),
+                 _hp_at_createfilew(NULL),
                  _hook_set_team_id(true),
                  _hook_set_settings(true),
                  _hook_context_reset(true),
