@@ -59,6 +59,7 @@ public:
     wstring _section_name;
     vector<wstring> _cpk_roots;
     wstring _start_game;
+    wstring _save_folder;
     vector<wstring> _exe_names;
     vector<wstring> _module_names;
     bool _close_sider_on_exit;
@@ -149,6 +150,7 @@ public:
                  _match_stats_enabled(DEFAULT_MATCH_STATS_ENABLED),
                  _global_block_input(DEFAULT_GLOBAL_BLOCK_INPUT),
                  _start_game(L""),
+                 _save_folder(L""),
                  _overlay_enabled(false),
                  _overlay_on_from_start(false),
                  _overlay_font(DEFAULT_OVERLAY_FONT),
@@ -242,6 +244,15 @@ public:
             }
             else if (wcscmp(L"start.game", key.c_str())==0) {
                 _start_game = value;
+            }
+            else if (wcscmp(L"save.folder", key.c_str())==0) {
+                _save_folder = value;
+                // ensure trailing backslash
+                if (!_save_folder.empty()) {
+                    if (_save_folder[_save_folder.size()-1] != L'\\') {
+                        _save_folder += L'\\';
+                    }
+                }
             }
             else if (wcscmp(L"overlay.text-color", key.c_str())==0) {
                 if (value.size() >= 8) {

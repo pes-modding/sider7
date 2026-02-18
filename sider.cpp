@@ -4527,69 +4527,94 @@ bool fileFromUserSave(const wchar_t *filename) {
 HANDLE sider_CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
     LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
 {
-    wstring newPath(sider_dir);
-    log_(L"sider_CreateFileW:: called for {%s}\n", lpFileName);
-    wchar_t *p = wcsrchr((wchar_t*)lpFileName, L'\\');
-    if (p) {
-        wchar_t *filename = p+1;
-        if (fileFromUserSave(filename)) {
-            newPath += L"save\\";
-            newPath += filename;
+    wstring newPath;
+    bool changed(false);
+    DBG(65536) log_(L"sider_CreateFileW:: called for {%s}\n", lpFileName);
+    if (!_config->_save_folder.empty()) {
+        wchar_t *p = wcsrchr((wchar_t*)lpFileName, L'\\');
+        if (p) {
+            wchar_t *filename = p+1;
+            if (fileFromUserSave(filename)) {
+                if (_config->_save_folder[0] == L'.') {
+                    newPath += sider_dir;
+                }
+                newPath += _config->_save_folder;
+                newPath += filename;
 
-            lpFileName = newPath.c_str();
+                lpFileName = newPath.c_str();
+                changed = true;
+            }
         }
     }
     HANDLE result = CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
-    log_(L"sider_CreateFileW:: using {%s} --> result: %p\n", lpFileName, result);
+    if (changed) log_(L"sider_CreateFileW:: using {%s} --> result: %p\n", lpFileName, result);
     return result;
 }
 
 BOOL sider_MoveFileExW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, DWORD dwFlags)
 {
-    wstring newPathFrom(sider_dir);
-    wstring newPathTo(sider_dir);
-    log_(L"sider_MoveFileExW:: called for {%s}\n", lpExistingFileName);
-    wchar_t *p = wcsrchr((wchar_t*)lpExistingFileName, L'\\');
-    if (p) {
-        wchar_t *filename = p+1;
-        if (fileFromUserSave(filename)) {
-            newPathFrom += L"save\\";
-            newPathFrom += filename;
+    wstring newPathFrom;
+    wstring newPathTo;
+    bool changed(false);
+    DBG(65536) log_(L"sider_MoveFileExW:: called for {%s}\n", lpExistingFileName);
+    if (!_config->_save_folder.empty()) {
+        wchar_t *p = wcsrchr((wchar_t*)lpExistingFileName, L'\\');
+        if (p) {
+            wchar_t *filename = p+1;
+            if (fileFromUserSave(filename)) {
+                if (_config->_save_folder[0] == L'.') {
+                    newPathFrom += sider_dir;
+                }
+                newPathFrom += _config->_save_folder;
+                newPathFrom += filename;
 
-            lpExistingFileName = newPathFrom.c_str();
+                lpExistingFileName = newPathFrom.c_str();
+                changed = true;
+            }
         }
-    }
-    wchar_t *q = wcsrchr((wchar_t*)lpNewFileName, L'\\');
-    if (q) {
-        wchar_t *filename = q+1;
-        if (fileFromUserSave(filename)) {
-            newPathTo += L"save\\";
-            newPathTo += filename;
+        wchar_t *q = wcsrchr((wchar_t*)lpNewFileName, L'\\');
+        if (q) {
+            wchar_t *filename = q+1;
+            if (fileFromUserSave(filename)) {
+                if (_config->_save_folder[0] == L'.') {
+                    newPathTo += sider_dir;
+                }
+                newPathTo += _config->_save_folder;
+                newPathTo += filename;
 
-            lpNewFileName = newPathTo.c_str();
+                lpNewFileName = newPathTo.c_str();
+                changed = true;
+            }
         }
     }
     BOOL result = MoveFileExW(lpExistingFileName, lpNewFileName, dwFlags);
-    log_(L"sider_MoveFileExW:: moving {%s} to {%s} --> result: %d\n", lpExistingFileName, lpNewFileName, result);
+    if (changed) log_(L"sider_MoveFileExW:: moving {%s} to {%s} --> result: %d\n", lpExistingFileName, lpNewFileName, result);
     return result;
 }
 
 BOOL sider_DeleteFileW(LPCWSTR lpFileName)
 {
-    wstring newPath(sider_dir);
-    log_(L"sider_DeleteFileW:: called for {%s}\n", lpFileName);
-    wchar_t *p = wcsrchr((wchar_t*)lpFileName, L'\\');
-    if (p) {
-        wchar_t *filename = p+1;
-        if (fileFromUserSave(filename)) {
-            newPath += L"save\\";
-            newPath += filename;
+    wstring newPath;
+    bool changed(false);
+    DBG(65536) log_(L"sider_DeleteFileW:: called for {%s}\n", lpFileName);
+    if (!_config->_save_folder.empty()) {
+        wchar_t *p = wcsrchr((wchar_t*)lpFileName, L'\\');
+        if (p) {
+            wchar_t *filename = p+1;
+            if (fileFromUserSave(filename)) {
+                if (_config->_save_folder[0] == L'.') {
+                    newPath += sider_dir;
+                }
+                newPath += _config->_save_folder;
+                newPath += filename;
 
-            lpFileName = newPath.c_str();
+                lpFileName = newPath.c_str();
+                changed = true;
+            }
         }
     }
     BOOL result = DeleteFileW(lpFileName);
-    log_(L"sider_DeleteFileW:: deleting {%s} --> result: %d\n", lpFileName, result);
+    if (changed) log_(L"sider_DeleteFileW:: deleting {%s} --> result: %d\n", lpFileName, result);
     return result;
 }
 
@@ -6966,6 +6991,7 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"vkey.reload-2 = 0x%02x\n", _config->_vkey_reload_2);
     log_(L"close.on.exit = %d\n", _config->_close_sider_on_exit);
     log_(L"start.game = %s\n", _config->_start_game.c_str());
+    log_(L"save.folder = %s\n", _config->_save_folder.c_str());
     log_(L"match.minutes = %d\n", _config->_num_minutes);
 
     log_(L"--------------------------\n");
