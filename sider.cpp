@@ -407,11 +407,10 @@ void hook_indirect_call(BYTE *loc, BYTE *p);
 LRESULT CALLBACK sider_keyboard_proc(int code, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK sider_foreground_idle_proc(int code, WPARAM wParam, LPARAM lParam);
 
-typedef HANDLE (*PFN_CreateFileW)(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
-    LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
-PFN_CreateFileW _org_CreateFileW;
 HANDLE sider_CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
     LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
+BOOL sider_MoveFileExW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, DWORD dwFlags);
+BOOL sider_DeleteFileW(LPCWSTR lpFileName);
 
 typedef HRESULT (*PFN_CreateDXGIFactory1)(REFIID riid, void **ppFactory);
 typedef HRESULT (*PFN_IDXGIFactory1_CreateSwapChain)(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_SWAP_CHAIN_DESC *pDesc, IDXGISwapChain **ppSwapChain);
@@ -4512,11 +4511,85 @@ HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_S
     return hr;
 }
 
+bool fileFromUserSave(const wchar_t *filename) {
+    return (wcsncmp(filename, L"ML", wcslen(L"ML"))==0 ||
+        wcsncmp(filename, L"BL", wcslen(L"BL"))==0 ||
+        wcsncmp(filename, L"LG", wcslen(L"LG"))==0 ||
+        wcsncmp(filename, L"CUP", wcslen(L"CUP"))==0 ||
+        wcsncmp(filename, L"EDIT", wcslen(L"EDIT"))==0 ||
+        wcsncmp(filename, L"SYSTEM", wcslen(L"SYSTEM"))==0 ||
+        wcsncmp(filename, L"OPTION", wcslen(L"OPTION"))==0 ||
+        wcsncmp(filename, L"REPLAY", wcslen(L"REPLAY"))==0 ||
+        wcsncmp(filename, L"GRAPHICS", wcslen(L"GRAPHICS"))==0 ||
+        wcsncmp(filename, L"FILELIST", wcslen(L"FILELIST"))==0);
+}
+
 HANDLE sider_CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
     LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
 {
+    wstring newPath(sider_dir);
+    log_(L"sider_CreateFileW:: called for {%s}\n", lpFileName);
+    wchar_t *p = wcsrchr((wchar_t*)lpFileName, L'\\');
+    if (p) {
+        wchar_t *filename = p+1;
+        if (fileFromUserSave(filename)) {
+            newPath += L"save\\";
+            newPath += filename;
+
+            lpFileName = newPath.c_str();
+        }
+    }
     HANDLE result = CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
-    log_(L"sider_CreateFileW:: called for {%s} --> result: %p\n", lpFileName, result);
+    log_(L"sider_CreateFileW:: using {%s} --> result: %p\n", lpFileName, result);
+    return result;
+}
+
+BOOL sider_MoveFileExW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, DWORD dwFlags)
+{
+    wstring newPathFrom(sider_dir);
+    wstring newPathTo(sider_dir);
+    log_(L"sider_MoveFileExW:: called for {%s}\n", lpExistingFileName);
+    wchar_t *p = wcsrchr((wchar_t*)lpExistingFileName, L'\\');
+    if (p) {
+        wchar_t *filename = p+1;
+        if (fileFromUserSave(filename)) {
+            newPathFrom += L"save\\";
+            newPathFrom += filename;
+
+            lpExistingFileName = newPathFrom.c_str();
+        }
+    }
+    wchar_t *q = wcsrchr((wchar_t*)lpNewFileName, L'\\');
+    if (q) {
+        wchar_t *filename = q+1;
+        if (fileFromUserSave(filename)) {
+            newPathTo += L"save\\";
+            newPathTo += filename;
+
+            lpNewFileName = newPathTo.c_str();
+        }
+    }
+    BOOL result = MoveFileExW(lpExistingFileName, lpNewFileName, dwFlags);
+    log_(L"sider_MoveFileExW:: moving {%s} to {%s} --> result: %d\n", lpExistingFileName, lpNewFileName, result);
+    return result;
+}
+
+BOOL sider_DeleteFileW(LPCWSTR lpFileName)
+{
+    wstring newPath(sider_dir);
+    log_(L"sider_DeleteFileW:: called for {%s}\n", lpFileName);
+    wchar_t *p = wcsrchr((wchar_t*)lpFileName, L'\\');
+    if (p) {
+        wchar_t *filename = p+1;
+        if (fileFromUserSave(filename)) {
+            newPath += L"save\\";
+            newPath += filename;
+
+            lpFileName = newPath.c_str();
+        }
+    }
+    BOOL result = DeleteFileW(lpFileName);
+    log_(L"sider_DeleteFileW:: deleting {%s} --> result: %d\n", lpFileName, result);
     return result;
 }
 
@@ -6945,7 +7018,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 43
+#define NUM_PATTERNS 45
     BYTE *frag[NUM_PATTERNS+1];
     frag[1] = lcpk_pattern_at_read_file;
     frag[2] = lcpk_pattern_at_get_size;
@@ -6990,6 +7063,8 @@ DWORD install_func(LPVOID thread_param) {
     frag[41] = pattern_set_edit_team_id;
     frag[42] = pattern_goal_scored;
     frag[43] = pattern_createfilew;
+    frag[44] = pattern_movefileexw;
+    frag[45] = pattern_deletefilew;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[1] = 24;
@@ -7056,6 +7131,8 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[41] = _config->_lua_enabled ? sizeof(pattern_set_edit_team_id)-1 : 0;
     frag_len[42] = _config->_lua_enabled ? sizeof(pattern_goal_scored)-1 : 0;
     frag_len[43] = sizeof(pattern_createfilew)-1;
+    frag_len[44] = sizeof(pattern_movefileexw)-1;
+    frag_len[45] = sizeof(pattern_deletefilew)-1;
 
     int offs[NUM_PATTERNS+1];
     offs[1] = lcpk_offs_at_read_file;
@@ -7101,6 +7178,8 @@ DWORD install_func(LPVOID thread_param) {
     offs[41] = offs_set_edit_team_id;
     offs[42] = offs_goal_scored;
     offs[43] = offs_createfilew;
+    offs[44] = offs_movefileexw;
+    offs[45] = offs_deletefilew;
 
     BYTE **addrs[NUM_PATTERNS+1];
     addrs[1] = &_config->_hp_at_read_file;
@@ -7146,6 +7225,8 @@ DWORD install_func(LPVOID thread_param) {
     addrs[41] = &_config->_hp_at_set_edit_team_id;
     addrs[42] = &_config->_hp_at_goal_scored;
     addrs[43] = &_config->_hp_at_createfilew;
+    addrs[44] = &_config->_hp_at_movefileexw;
+    addrs[45] = &_config->_hp_at_deletefilew;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -7283,7 +7364,9 @@ bool all_found(config_t *cfg) {
     }
     all = all && (
         cfg->_hp_at_dxgi > 0 &&
-        cfg->_hp_at_createfilew > 0
+        cfg->_hp_at_createfilew > 0 &&
+        cfg->_hp_at_movefileexw > 0 &&
+        cfg->_hp_at_deletefilew > 0
     );
     if (cfg->_free_side_select) {
         all = all && (
@@ -7370,6 +7453,12 @@ bool hook_if_all_found() {
         }
         if (_config->_hp_at_createfilew) {
             hook_indirect_call(_config->_hp_at_createfilew, (BYTE*)sider_CreateFileW);
+        }
+        if (_config->_hp_at_movefileexw) {
+            hook_indirect_call(_config->_hp_at_movefileexw, (BYTE*)sider_MoveFileExW);
+        }
+        if (_config->_hp_at_deletefilew) {
+            hook_indirect_call(_config->_hp_at_deletefilew, (BYTE*)sider_DeleteFileW);
         }
 
         if (_config->_lua_enabled) {

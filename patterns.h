@@ -904,4 +904,34 @@ static BYTE pattern_createfilew[] =
     "\x88\x44\x24\x52";
 static int offs_createfilew = 0xac - 0x90;
 
+/**
+000000014141134C | 48:8D4D A0                      | lea rcx,qword ptr ss:[rbp-60]           |
+0000000141411350 | 48:837D B8 08                   | cmp qword ptr ss:[rbp-48],8             |
+0000000141411355 | 48:0F434D A0                    | cmovae rcx,qword ptr ss:[rbp-60]        |
+000000014141135A | 44:8D47 02                      | lea r8d,qword ptr ds:[rdi+2]            |
+000000014141135E | FF15 8CDF1101                   | call qword ptr ds:[<&MoveFileExW>]      |
+**/
+static BYTE pattern_movefileexw[] =
+    "\x48\x8d\x4d\xa0"
+    "\x48\x83\x7d\xb8\x08"
+    "\x48\x0f\x43\x4d\xa0"
+    "\x44\x8d\x47\x02"
+    "\xff\x15";
+static int offs_movefileexw = 0x5e - 0x4c;
+
+/**
+000000014141136E | 44:8BF0                         | mov r14d,eax                            |
+0000000141411371 | 48:8D4D A0                      | lea rcx,qword ptr ss:[rbp-60]           |
+0000000141411375 | 48:837D B8 08                   | cmp qword ptr ss:[rbp-48],8             |
+000000014141137A | 48:0F434D A0                    | cmovae rcx,qword ptr ss:[rbp-60]        |
+000000014141137F | FF15 03DF1101                   | call qword ptr ds:[<&DeleteFileW>]      |
+**/
+static BYTE pattern_deletefilew[] =
+    "\x44\x8b\xf0"
+    "\x48\x8d\x4d\xa0"
+    "\x48\x83\x7d\xb8\x08"
+    "\x48\x0f\x43\x4d\xa0"
+    "\xff\x15";
+static int offs_deletefilew = 0x7f - 0x6e;
+
 #endif
