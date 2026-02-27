@@ -59,7 +59,6 @@ public:
     wstring _section_name;
     vector<wstring> _cpk_roots;
     wstring _start_game;
-    wstring _save_folder;
     vector<wstring> _exe_names;
     vector<wstring> _module_names;
     bool _close_sider_on_exit;
@@ -85,6 +84,7 @@ public:
     int _num_minutes;
     int _screen_width;
     int _screen_height;
+    wstring _save_folder;
     BYTE *_hp_at_read_file;
     BYTE *_hp_at_get_size;
     BYTE *_hp_at_extend_cpk;
