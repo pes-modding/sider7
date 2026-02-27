@@ -83,6 +83,8 @@ public:
     int _vkey_reload_1;
     int _vkey_reload_2;
     int _num_minutes;
+    int _screen_width;
+    int _screen_height;
     BYTE *_hp_at_read_file;
     BYTE *_hp_at_get_size;
     BYTE *_hp_at_extend_cpk;
@@ -213,6 +215,8 @@ public:
                  _hook_trophy_table(true),
                  _hook_all_keyboards(DEFAULT_HOOK_ALL_KEYBOARDS),
                  _controller_input_blocking_enabled(DEFAULT_CONTROLLER_INPUT_BLOCKING_ENABLED),
+                 _screen_width(0),
+                 _screen_height(0),
                  _num_minutes(0)
     {
         wchar_t settings[32767];
@@ -496,6 +500,14 @@ public:
 
         _num_minutes = GetPrivateProfileInt(_section_name.c_str(),
             L"match.minutes", _num_minutes,
+            config_ini);
+
+        _screen_width = GetPrivateProfileInt(_section_name.c_str(),
+            L"screen.width", _screen_width,
+            config_ini);
+
+        _screen_height = GetPrivateProfileInt(_section_name.c_str(),
+            L"screen.height", _screen_height,
             config_ini);
 
         _hook_set_team_id = GetPrivateProfileInt(_section_name.c_str(),

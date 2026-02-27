@@ -3458,8 +3458,7 @@ void draw_ui(float top, float bottom, float right_margin)
     }
     pRenderTargetTexture->Release();
 
-    RECT rc;
-    GetClientRect(DX11.Window, &rc);
+    RECT rc = {0, 0, (LONG)DX11.Width, (LONG)DX11.Height};
 
     // draw overlay background
     {
@@ -4478,6 +4477,16 @@ HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_S
         DX11.Width = desc.BufferDesc.Width;
         DX11.Height = desc.BufferDesc.Height;
         logu_("==> window handle: %p\n", DX11.Window);
+        logu_("==> width: %d, height: %d\n", DX11.Width, DX11.Height);
+
+        if (_config->_screen_width > 0) {
+            DX11.Width = _config->_screen_width;
+            logu_("==> width overriden to: %d\n", DX11.Width);
+        }
+        if (_config->_screen_height > 0) {
+            DX11.Height = _config->_screen_height;
+            logu_("==> height overriden to: %d\n", DX11.Height);
+        }
     }
 
     // check if we need to hook Present method
@@ -6991,8 +7000,13 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"vkey.reload-2 = 0x%02x\n", _config->_vkey_reload_2);
     log_(L"close.on.exit = %d\n", _config->_close_sider_on_exit);
     log_(L"start.game = %s\n", _config->_start_game.c_str());
+    for (vector<wstring>::iterator eit = _config->_exe_names.begin(); eit != _config->_exe_names.end(); eit++) {
+        log_(L"exe.name = %s\n", eit->c_str());
+    }
     log_(L"save.folder = %s\n", _config->_save_folder.c_str());
     log_(L"match.minutes = %d\n", _config->_num_minutes);
+    log_(L"screen.width = %d\n", _config->_screen_width);
+    log_(L"screen.height = %d\n", _config->_screen_height);
 
     log_(L"--------------------------\n");
     log_(L"gamepad.dinput.enabled = %d\n", _gamepad_config->_dinput_enabled);
