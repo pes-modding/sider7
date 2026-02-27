@@ -1,22 +1,22 @@
 /*
+Demonstrates one way to load multiple files and play them all back at the same time.
+
+When mixing multiple sounds together, you should not create multiple devices. Instead you should create only a single
+device and then mix your sounds together which you can do by simply summing their samples together. The simplest way to
+do this is to use floating point samples and use miniaudio's built-in clipper to handling clipping for you. (Clipping
+is when sample are clamped to their minimum and maximum range, which for floating point is -1..1.)
+
+```
 Usage:   simple_mixing [input file 0] [input file 1] ... [input file n]
 Example: simple_mixing file1.wav file2.flac
+```
 */
-
-#define DR_FLAC_IMPLEMENTATION
-#include "../extras/dr_flac.h"  /* Enables FLAC decoding. */
-#define DR_MP3_IMPLEMENTATION
-#include "../extras/dr_mp3.h"   /* Enables MP3 decoding. */
-#define DR_WAV_IMPLEMENTATION
-#include "../extras/dr_wav.h"   /* Enables WAV decoding. */
-
-#define MINIAUDIO_IMPLEMENTATION
-#include "../miniaudio.h"
+#include "../miniaudio.c"
 
 #include <stdio.h>
 
 /*
-For simplicity, this example requires the device use floating point samples.
+For simplicity, this example requires the device to use floating point samples.
 */
 #define SAMPLE_FORMAT   ma_format_f32
 #define CHANNEL_COUNT   2
@@ -28,7 +28,7 @@ ma_bool32*  g_pDecodersAtEnd;
 
 ma_event g_stopEvent; /* <-- Signaled by the audio thread, waited on by the main thread. */
 
-ma_bool32 are_all_decoders_at_end()
+ma_bool32 are_all_decoders_at_end(void)
 {
     ma_uint32 iDecoder;
     for (iDecoder = 0; iDecoder < g_decoderCount; ++iDecoder) {
@@ -47,21 +47,22 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, m
     contents of the output buffer by simply adding the samples together. You could also clip the samples to -1..+1, but I'm not
     doing that in this example.
     */
+    ma_result result;
     float temp[4096];
     ma_uint32 tempCapInFrames = ma_countof(temp) / CHANNEL_COUNT;
     ma_uint32 totalFramesRead = 0;
 
     while (totalFramesRead < frameCount) {
-        ma_uint32 iSample;
-        ma_uint32 framesReadThisIteration;
+        ma_uint64 iSample;
+        ma_uint64 framesReadThisIteration;
         ma_uint32 totalFramesRemaining = frameCount - totalFramesRead;
         ma_uint32 framesToReadThisIteration = tempCapInFrames;
         if (framesToReadThisIteration > totalFramesRemaining) {
             framesToReadThisIteration = totalFramesRemaining;
         }
 
-        framesReadThisIteration = (ma_uint32)ma_decoder_read_pcm_frames(pDecoder, temp, framesToReadThisIteration);
-        if (framesReadThisIteration == 0) {
+        result = ma_decoder_read_pcm_frames(pDecoder, temp, framesToReadThisIteration, &framesReadThisIteration);
+        if (result != MA_SUCCESS || framesReadThisIteration == 0) {
             break;
         }
 
@@ -70,9 +71,9 @@ ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, m
             pOutputF32[totalFramesRead*CHANNEL_COUNT + iSample] += temp[iSample];
         }
 
-        totalFramesRead += framesReadThisIteration;
+        totalFramesRead += (ma_uint32)framesReadThisIteration;
 
-        if (framesReadThisIteration < framesToReadThisIteration) {
+        if (framesReadThisIteration < (ma_uint32)framesToReadThisIteration) {
             break;  /* Reached EOF. */
         }
     }
@@ -85,8 +86,7 @@ void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uin
     float* pOutputF32 = (float*)pOutput;
     ma_uint32 iDecoder;
 
-    ma_assert(pDevice->playback.format == SAMPLE_FORMAT);   /* <-- Important for this example. */
-
+    /* This example assumes the device was configured to use ma_format_f32. */
     for (iDecoder = 0; iDecoder < g_decoderCount; ++iDecoder) {
         if (!g_pDecodersAtEnd[iDecoder]) {
             ma_uint32 framesRead = read_and_mix_pcm_frames_f32(&g_pDecoders[iDecoder], pOutputF32, frameCount);
@@ -105,6 +105,7 @@ void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uin
     }
 
     (void)pInput;
+    (void)pDevice;
 }
 
 int main(int argc, char** argv)
@@ -166,7 +167,7 @@ int main(int argc, char** argv)
     needs to be done before starting the device. We need a context to initialize the event, which we can get from the device. Alternatively you can initialize
     a context separately, but we don't need to do that for this example.
     */
-    ma_event_init(device.pContext, &g_stopEvent);
+    ma_event_init(&g_stopEvent);
 
     /* Now we start playback and wait for the audio thread to tell us to stop. */
     if (ma_device_start(&device) != MA_SUCCESS) {

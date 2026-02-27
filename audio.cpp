@@ -1,12 +1,5 @@
 #define UNICODE
 
-#define DR_FLAC_IMPLEMENTATION
-#include "extras/dr_flac.h"  /* Enables FLAC decoding. */
-#define DR_MP3_IMPLEMENTATION
-#include "extras/dr_mp3.h"   /* Enables MP3 decoding. */
-#define DR_WAV_IMPLEMENTATION
-#include "extras/dr_wav.h"   /* Enables WAV decoding. */
-
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
@@ -137,7 +130,8 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
         return;
     }
 
-    ma_uint64 n = ma_decoder_read_pcm_frames(p->pDecoder, pOutput, frameCount);
+    ma_uint64 n = 0;
+    ma_decoder_read_pcm_frames(p->pDecoder, pOutput, frameCount, &n);
     //logu_("read %llu frames\n", n);
 
     if (n == 0 && p->state != Audio::finished) {

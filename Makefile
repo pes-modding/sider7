@@ -15,8 +15,8 @@ EXTRA_CFLAGS=/DMYDLL_RELEASE_BUILD
 EXTRA_CFLAGS=$(EXTRA_CFLAGS) /DPERF_TESTING
 !endif
 
-LPZLIB=soft\zlib-1.2.11
-ZLIBINC=/I soft\zlib-1.2.11
+LPZLIB=soft\zlib-1.3.2
+ZLIBINC=/I soft\zlib-1.3.2
 ZLIBLIB=zlib.lib
 
 # 4731: warning about ebp modification
