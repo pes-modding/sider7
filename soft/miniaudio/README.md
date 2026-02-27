@@ -1,76 +1,85 @@
-![miniaudio](http://dred.io/img/miniaudio_wide.png)
+<h1 align="center">
+    <a href="https://miniaud.io"><img src="https://miniaud.io/img/miniaudio_wide.png" alt="miniaudio" width="1280"></a>
+    <br>
+</h1>
 
-miniaudio (formerly mini_al) is a single file library for audio playback and capture. It's written
-in C89 (compilable as C++) and released into the public domain.
+<h4 align="center">An audio playback and capture library in a single source file.</h4>
+
+<p align="center">
+    <a href="https://discord.gg/9vpqbjU"><img src="https://img.shields.io/discord/712952679415939085?label=discord&logo=discord&style=flat-square" alt="discord"></a>
+    <a href="https://x.com/mackron"><img alt="x" src="https://img.shields.io/twitter/url?url=https%3A%2F%2Fx.com%2Fmackron&style=flat-square&logo=x&label=%40mackron"></a>
+</p>
+
+<p align="center">
+    <a href="#features">Features</a> -
+    <a href="#examples">Examples</a> -
+    <a href="#building">Building</a> -
+    <a href="#documentation">Documentation</a> -
+    <a href="#supported-platforms">Supported Platforms</a> -
+    <a href="#security">Security</a> -
+    <a href="#license">License</a>
+</p>
+
+miniaudio is written in C with no dependencies except the standard library and should compile clean on all major
+compilers without the need to install any additional development packages. All major desktop and mobile platforms
+are supported.
 
 
 Features
 ========
-- A simple build system.
-  - It should Just Work out of the box, without the need to download and install any dependencies.
-- A simple API.
-- Supports playback, capture and full-duplex.
+- Simple build system with no external dependencies.
+- Simple and flexible API.
+- Low-level API for direct access to raw audio data.
+- High-level API for sound management, mixing, effects and optional 3D spatialization.
+- Flexible node graph system for advanced mixing and effect processing.
+- Resource management for loading sound files.
+- Decoding, with built-in support for WAV, FLAC, and MP3, in addition to being able to plug in custom decoders.
+- Encoding (WAV only).
 - Data conversion.
-  - Sample format conversion, with optional dithering.
-  - Sample rate conversion.
-  - Channel mapping and channel conversion (stereo to 5.1, etc.)
-- MP3, Vorbis, FLAC and WAV decoding.
-  - This depends on external single file libraries which can be found in the "extras" folder.
+- Resampling, including custom resamplers.
+- Channel mapping.
+- Basic generation of waveforms and noise.
+- Basic effects and filters.
+
+Refer to the [Programming Manual](https://miniaud.io/docs/manual/) for a more complete description of
+available features in miniaudio.
 
 
-Supported Platforms
-===================
-- Windows (XP+), UWP
-- macOS, iOS
-- Linux
-- BSD
-- Android
-- Raspberry Pi
-- Emscripten / HTML5
-
-
-Backends
+Examples
 ========
-- WASAPI
-- DirectSound
-- WinMM
-- Core Audio (Apple)
-- ALSA
-- PulseAudio
-- JACK
-- sndio (OpenBSD)
-- audio(4) (NetBSD and OpenBSD)
-- OSS (FreeBSD)
-- AAudio (Android 8.0+)
-- OpenSL|ES (Android only)
-- Web Audio (Emscripten)
-- Null (Silence)
 
+This example shows one way to play a sound using the high level API.
 
-Building
-======
-Do the following in one source file:
 ```c
-#define MINIAUDIO_IMPLEMENTATION
-#include "miniaudio.h"
+#include "miniaudio/miniaudio.h"
+
+#include <stdio.h>
+
+int main()
+{
+    ma_result result;
+    ma_engine engine;
+
+    result = ma_engine_init(NULL, &engine);
+    if (result != MA_SUCCESS) {
+        return -1;
+    }
+
+    ma_engine_play_sound(&engine, "sound.wav", NULL);
+
+    printf("Press Enter to quit...");
+    getchar();
+
+    ma_engine_uninit(&engine);
+
+    return 0;
+}
 ```
-Then just compile. There's no need to install any dependencies. On Windows and macOS there's no need to link
-to anything. On Linux and BSD, just link to -lpthread, -lm and -ldl.
 
-
-Simple Playback Example
-=======================
+This example shows how to decode and play a sound using the low level API.
 
 ```c
-#define DR_FLAC_IMPLEMENTATION
-#include "../extras/dr_flac.h"  /* Enables FLAC decoding. */
-#define DR_MP3_IMPLEMENTATION
-#include "../extras/dr_mp3.h"   /* Enables MP3 decoding. */
-#define DR_WAV_IMPLEMENTATION
-#include "../extras/dr_wav.h"   /* Enables WAV decoding. */
-
-#define MINIAUDIO_IMPLEMENTATION
-#include "../miniaudio.h"
+#include "miniaudio/miniaudio.h"
 
 #include <stdio.h>
 
@@ -81,7 +90,7 @@ void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uin
         return;
     }
 
-    ma_decoder_read_pcm_frames(pDecoder, pOutput, frameCount);
+    ma_decoder_read_pcm_frames(pDecoder, pOutput, frameCount, NULL);
 
     (void)pInput;
 }
@@ -133,98 +142,72 @@ int main(int argc, char** argv)
 }
 ```
 
-
-MP3/Vorbis/FLAC/WAV Decoding
-============================
-miniaudio includes a decoding API which supports the following backends:
-- FLAC via [dr_flac](https://github.com/mackron/dr_libs/blob/master/dr_flac.h)
-- MP3 via [dr_mp3](https://github.com/mackron/dr_libs/blob/master/dr_mp3.h)
-- WAV via [dr_wav](https://github.com/mackron/dr_libs/blob/master/dr_wav.h)
-- Vorbis via [stb_vorbis](https://github.com/nothings/stb/blob/master/stb_vorbis.c)
-
-Copies of these libraries can be found in the "extras" folder.
-
-To enable support for a decoding backend, all you need to do is #include the header section of the
-relevant backend library before the implementation of miniaudio, like so:
-
-```c
-#include "dr_flac.h"    // Enables FLAC decoding.
-#include "dr_mp3.h"     // Enables MP3 decoding.
-#include "dr_wav.h"     // Enables WAV decoding.
-
-#define MINIAUDIO_IMPLEMENTATION
-#include "miniaudio.h"
-```
-
-A decoder can be initialized from a file with `ma_decoder_init_file()`, a block of memory with
-`ma_decoder_init_memory()`, or from data delivered via callbacks with `ma_decoder_init()`. Here
-is an example for loading a decoder from a file:
-
-```c
-ma_decoder decoder;
-ma_result result = ma_decoder_init_file("MySong.mp3", NULL, &decoder);
-if (result != MA_SUCCESS) {
-    return false;   // An error occurred.
-}
-
-...
-
-ma_decoder_uninit(&decoder);
-```
-
-When initializing a decoder, you can optionally pass in a pointer to a `ma_decoder_config` object
-(the `NULL` argument in the example above) which allows you to configure the output format, channel
-count, sample rate and channel map:
-
-```c
-ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 2, 48000);
-```
-
-When passing in NULL for this parameter, the output format will be the same as that defined by the
-decoding backend.
-
-Data is read from the decoder as PCM frames:
-
-```c
-ma_uint64 framesRead = ma_decoder_read_pcm_frames(pDecoder, pFrames, framesToRead);
-```
-
-You can also seek to a specific frame like so:
-
-```c
-ma_result result = ma_decoder_seek_to_pcm_frame(pDecoder, targetFrame);
-if (result != MA_SUCCESS) {
-    return false;   // An error occurred.
-}
-```
-
-When loading a decoder, miniaudio uses a trial and error technique to find the appropriate decoding
-backend. This can be unnecessarily inefficient if the type is already known. In this case you can
-use the `_wav`, `_mp3`, etc. varients of the aforementioned initialization APIs:
-
-```
-ma_decoder_init_wav()
-ma_decoder_init_mp3()
-ma_decoder_init_memory_wav()
-ma_decoder_init_memory_mp3()
-ma_decoder_init_file_wav()
-ma_decoder_init_file_mp3()
-etc.
-```
-
-The `ma_decoder_init_file()` API will try using the file extension to determine which decoding
-backend to prefer.
+More examples can be found in the [examples](examples) folder or online here: https://miniaud.io/docs/examples/
 
 
-Unofficial Bindings
+Building
+========
+Just compile miniaudio.c like any other source file and include miniaudio.h like a normal header. There's no need
+to install any dependencies. On Windows and macOS there's no need to link to anything. On Linux and BSD just link
+to `-lpthread` and `-lm`. On iOS you need to compile as Objective-C. Link to `-ldl` if you get errors about
+`dlopen()`, etc.
+
+If you get errors about undefined references to `__sync_val_compare_and_swap_8`, `__atomic_load_8`, etc. you
+need to link with `-latomic`.
+
+ABI compatibility is not guaranteed between versions so take care if compiling as a DLL/SO. The suggested way
+to integrate miniaudio is by adding it directly to your source tree.
+
+You can also use CMake if that's your preference.
+
+
+Documentation
+=============
+Online documentation can be found here: https://miniaud.io/docs/
+
+Documentation can also be found at the top of [miniaudio.h](https://raw.githubusercontent.com/mackron/miniaudio/master/miniaudio.h)
+which is always the most up-to-date and authoritative source of information on how to use miniaudio. All other
+documentation is generated from this in-code documentation.
+
+
+Supported Platforms
 ===================
-The projects below offer bindings for other languages which you may be interested in. Note that these
-are unofficial and are not maintained as part of this repository. If you encounter a binding-specific
-bug, please post a bug report to the specific project. If you've written your own bindings let me know
-and I'll consider adding it to this list.
+- Windows
+- macOS, iOS
+- Linux
+- FreeBSD / OpenBSD / NetBSD
+- Android
+- Raspberry Pi
+- Emscripten / HTML5
 
-Language | Project
----------|--------
-Python   | [pyminiaudio](https://github.com/irmen/pyminiaudio)
-Go       | [malgo](https://github.com/gen2brain/malgo)
+miniaudio should compile clean on other platforms, but it will not include any support for playback or capture
+by default. To support that, you would need to implement a custom backend. You can do this without needing to
+modify the miniaudio source code. See the [custom_backend](examples/custom_backend.c) example.
 
+Backends
+--------
+- WASAPI
+- DirectSound
+- WinMM
+- Core Audio (Apple)
+- ALSA
+- PulseAudio
+- JACK
+- sndio (OpenBSD)
+- audio(4) (NetBSD and OpenBSD)
+- OSS (FreeBSD)
+- AAudio (Android 8.0+)
+- OpenSL|ES (Android only)
+- Web Audio (Emscripten)
+- Null (Silence)
+- Custom
+
+
+Security
+========
+See the miniaudio [security policy](.github/SECURITY.md).
+
+
+License
+=======
+Your choice of either public domain or [MIT No Attribution](https://github.com/aws/mit-0).
