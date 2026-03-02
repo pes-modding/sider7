@@ -20,9 +20,9 @@ vtexshader.h
 pshader.h
 ptexshader.h
 vmdef.lua
-soft/zlib-1.2.11/*.exp
-soft/zlib-1.2.11/*.lib
-soft/zlib-1.2.11/*.dll
+soft/zlib-1.3.2/*.exp
+soft/zlib-1.3.2/*.lib
+soft/zlib-1.3.2/*.dll
 soft/FW1FontWrapper/Source/vsimple.h
 soft/FW1FontWrapper/Source/vclip.h
 soft/FW1FontWrapper/Source/vempty.h
