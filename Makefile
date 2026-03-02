@@ -23,7 +23,7 @@ ZLIBLIB=zlib.lib
 #CFLAGS=/nologo /Od /EHsc /wd4731 /MT /D_WIN32_WINNT=0x601 /DMA_NO_AVX2 /DMA_NO_AVX512 $(EXTRA_CFLAGS)
 CFLAGS=/nologo /Od /EHsc /wd4731 /MT /D_WIN32_WINNT=0x601 $(EXTRA_CFLAGS)
 LFLAGS=/NOLOGO /DEFAULTLIB:"LIBCMT"
-LIBS=user32.lib gdi32.lib comctl32.lib version.lib ole32.lib shell32.lib psapi.lib
+LIBS=user32.lib gdi32.lib comctl32.lib version.lib ole32.lib shell32.lib psapi.lib userenv.lib
 
 LUAINC=/I soft\LuaJIT-2.1.0-beta3\src
 LUALIBPATH=soft\LuaJIT-2.1.0-beta3\src

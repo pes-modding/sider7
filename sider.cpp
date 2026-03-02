@@ -2,6 +2,7 @@
 
 //#include "stdafx.h"
 #include <windows.h>
+#include <userenv.h>
 #include <shellapi.h>
 #include <psapi.h>
 #include <stdio.h>
@@ -806,6 +807,7 @@ wchar_t dll_log[MAX_PATH];
 wchar_t dll_ini[MAX_PATH];
 wchar_t gamepad_ini[MAX_PATH];
 wchar_t sider_dir[MAX_PATH];
+wchar_t user_profiles_dir[MAX_PATH];
 
 static int get_team_id(MATCH_INFO_STRUCT *mi, int home_or_away);
 
@@ -1692,6 +1694,12 @@ bool init_paths() {
     wcscpy(sider_dir, dll_log);
     p = wcsrchr(sider_dir, L'\\');
     *(p+1) = L'\0';
+
+    // prep user-profiles dir
+    DWORD len = MAX_PATH;
+    if (!GetProfilesDirectoryW(user_profiles_dir, &len)) {
+        wcscpy(user_profiles_dir, L"\\null\\");
+    }
 
     return true;
 }
@@ -4521,16 +4529,7 @@ HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_S
 }
 
 bool fileFromUserSave(const wchar_t *filename) {
-    return (wcsncmp(filename, L"ML", wcslen(L"ML"))==0 ||
-        wcsncmp(filename, L"BL", wcslen(L"BL"))==0 ||
-        wcsncmp(filename, L"LG", wcslen(L"LG"))==0 ||
-        wcsncmp(filename, L"CUP", wcslen(L"CUP"))==0 ||
-        wcsncmp(filename, L"EDIT", wcslen(L"EDIT"))==0 ||
-        wcsncmp(filename, L"SYSTEM", wcslen(L"SYSTEM"))==0 ||
-        wcsncmp(filename, L"OPTION", wcslen(L"OPTION"))==0 ||
-        wcsncmp(filename, L"REPLAY", wcslen(L"REPLAY"))==0 ||
-        wcsncmp(filename, L"GRAPHICS", wcslen(L"GRAPHICS"))==0 ||
-        wcsncmp(filename, L"FILELIST", wcslen(L"FILELIST"))==0);
+    return (wcsstr(filename, L"\\save\\") != NULL) && (wcsstr(filename, user_profiles_dir) == filename);
 }
 
 HANDLE sider_CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
@@ -4543,7 +4542,7 @@ HANDLE sider_CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShar
         wchar_t *p = wcsrchr((wchar_t*)lpFileName, L'\\');
         if (p) {
             wchar_t *filename = p+1;
-            if (fileFromUserSave(filename)) {
+            if (fileFromUserSave(lpFileName)) {
                 if (_config->_save_folder[0] == L'.') {
                     newPath += sider_dir;
                 }
@@ -4570,7 +4569,7 @@ BOOL sider_MoveFileExW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, DWORD 
         wchar_t *p = wcsrchr((wchar_t*)lpExistingFileName, L'\\');
         if (p) {
             wchar_t *filename = p+1;
-            if (fileFromUserSave(filename)) {
+            if (fileFromUserSave(lpExistingFileName)) {
                 if (_config->_save_folder[0] == L'.') {
                     newPathFrom += sider_dir;
                 }
@@ -4584,7 +4583,7 @@ BOOL sider_MoveFileExW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, DWORD 
         wchar_t *q = wcsrchr((wchar_t*)lpNewFileName, L'\\');
         if (q) {
             wchar_t *filename = q+1;
-            if (fileFromUserSave(filename)) {
+            if (fileFromUserSave(lpNewFileName)) {
                 if (_config->_save_folder[0] == L'.') {
                     newPathTo += sider_dir;
                 }
@@ -4610,7 +4609,7 @@ BOOL sider_DeleteFileW(LPCWSTR lpFileName)
         wchar_t *p = wcsrchr((wchar_t*)lpFileName, L'\\');
         if (p) {
             wchar_t *filename = p+1;
-            if (fileFromUserSave(filename)) {
+            if (fileFromUserSave(lpFileName)) {
                 if (_config->_save_folder[0] == L'.') {
                     newPath += sider_dir;
                 }
@@ -6933,6 +6932,7 @@ DWORD install_func(LPVOID thread_param) {
     log_(L"DLL attaching to (%s).\n", module_filename);
     log_(L"Mapped into PES.\n");
     log_(L"sider dir: %s\n", sider_dir);
+    log_(L"user profiles dir: %s\n", user_profiles_dir);
     logu_("UTF-8 check: ленинградское время ноль часов ноль минут.\n");
 
     _is_game = true;
