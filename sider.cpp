@@ -479,6 +479,15 @@ struct layout_t {
     float image_aspect_ratio;
     float image_hmargin;
     float image_vmargin;
+    // dynamic overlay properties
+    DWORD text_color;
+    DWORD background_color;
+    float image_alpha;
+    int location; // 0 = top, 1 = bottom
+    bool has_text_color;
+    bool has_background_color;
+    bool has_image_alpha;
+    bool has_location;
 };
 
 overlay_image_t _overlay_image;
@@ -2756,6 +2765,46 @@ void module_overlay_on(module_t *m, char **text, char **image_path, struct layou
                     opts->has_image_vmargin = true;
                 }
                 lua_pop(L, 1);
+                // dynamic overlay properties
+                lua_getfield(L, -1, "text_color");
+                if (lua_isstring(L, -1)) {
+                    const char *color_str = lua_tostring(L, -1);
+                    unsigned int r, g, b, a;
+                    if (sscanf(color_str, "%2x%2x%2x%2x", &r, &g, &b, &a) == 4) {
+                        DWORD color_value = r | (g << 8) | (b << 16) | (a << 24);
+                        opts->text_color = color_value;
+                        opts->has_text_color = true;
+                    }
+                }
+                lua_pop(L, 1);
+                lua_getfield(L, -1, "background_color");
+                if (lua_isstring(L, -1)) {
+                    const char *color_str = lua_tostring(L, -1);
+                    unsigned int r, g, b, a;
+                    if (sscanf(color_str, "%2x%2x%2x%2x", &r, &g, &b, &a) == 4) {
+                        DWORD color_value = r | (g << 8) | (b << 16) | (a << 24);
+                        opts->background_color = color_value;
+                        opts->has_background_color = true;
+                    }
+                }
+                lua_pop(L, 1);
+                lua_getfield(L, -1, "image_alpha");
+                if (lua_isnumber(L, -1)) {
+                    opts->image_alpha = lua_tonumber(L, -1);
+                    opts->has_image_alpha = true;
+                }
+                lua_pop(L, 1);
+                lua_getfield(L, -1, "location");
+                if (lua_isstring(L, -1)) {
+                    const char *loc = lua_tostring(L, -1);
+                    if (strcmp(loc, "bottom") == 0) {
+                        opts->location = 1;
+                    } else {
+                        opts->location = 0; // default to top
+                    }
+                    opts->has_location = true;
+                }
+                lua_pop(L, 1);
             }
             lua_pop(L, 3);
         }
@@ -3381,10 +3430,10 @@ int prep_ui(float font_size, float right_margin)
     // overlay
     {
         D3D11_BUFFER_DESC bd;
-        bd.Usage = D3D11_USAGE_DEFAULT;
+        bd.Usage = D3D11_USAGE_DYNAMIC; // Allow updates for per-frame color changes
         bd.ByteWidth = sizeof(g_vertices);
         bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        bd.CPUAccessFlags = 0;
+        bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         bd.MiscFlags = 0;
         bd.StructureByteStride = 0;
         D3D11_SUBRESOURCE_DATA initData;
@@ -3417,7 +3466,7 @@ int prep_ui(float font_size, float right_margin)
     return pixel_height;
 }
 
-void draw_text(float font_size, float right_margin)
+void draw_text(float font_size, float right_margin, DWORD text_color)
 {
     UINT flags = FW1_RESTORESTATE;
     //FLOAT y = DX11.Height*0.0f;
@@ -3440,7 +3489,7 @@ void draw_text(float font_size, float right_margin)
 		//DX11.Width*0.01f,// X position
 		//y,// Y position
         &rectIn,
-        _config->_overlay_text_color, //0xd080ff80 - Text color, 0xAaBbGgRr
+        text_color ? text_color : _config->_overlay_text_color, //0xd080ff80 - Text color, 0xAaBbGgRr
         NULL, NULL,
 		flags //0// Flags (for example FW1_RESTORESTATE to keep context states unchanged)
 	);
@@ -3448,8 +3497,39 @@ void draw_text(float font_size, float right_margin)
 	//pFW1Factory->Release();
 }
 
-void draw_ui(float top, float bottom, float right_margin)
+void draw_ui(float top, float bottom, float right_margin, DWORD text_color, DWORD bg_color, float image_alpha_override)
 {
+    // Use provided colors or fall back to config defaults
+    if (!text_color)
+        text_color = _config->_overlay_text_color;
+    if (!bg_color)
+        bg_color = _config->_overlay_background_color;
+
+    // Convert DWORD AABBGGRR to normalized float RGBA components for vertex color
+    float r = (bg_color & 0xFF) / 255.0f;
+    float g = ((bg_color >> 8) & 0xFF) / 255.0f;
+    float b = ((bg_color >> 16) & 0xFF) / 255.0f;
+    float a = ((bg_color >> 24) & 0xFF) / 255.0f;
+
+    // Create temporary vertex data with dynamic color
+    SimpleVertex vertices_with_color[] = {
+        {-1.0f, 1.0f, 0.5f, 1.f, r, g, b, a},
+        {1.0f, 1.0f, 0.5f, 1.f, r, g, b, a},
+        {1.0f, -1.0f, 0.5f, 1.f, r, g, b, a},
+        {1.0f, -1.0f, 0.5f, 1.f, r, g, b, a},
+        {-1.0f, -1.0f, 0.5f, 1.f, r, g, b, a},
+        {-1.0f, 1.0f, 0.5f, 1.f, r, g, b, a},
+    };
+
+    // Update vertex buffer before rendering
+    if (DX11.Context) {
+        D3D11_MAPPED_SUBRESOURCE mappedResource;
+        if (SUCCEEDED(DX11.Context->Map(g_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource))) {
+            memcpy(mappedResource.pData, vertices_with_color, sizeof(vertices_with_color));
+            DX11.Context->Unmap(g_pVertexBuffer, 0);
+        }
+    }
+
     // Create the render target view
     ID3D11Texture2D* pRenderTargetTexture;
     hr = DX11.SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pRenderTargetTexture);
@@ -3505,6 +3585,13 @@ void draw_ui(float top, float bottom, float right_margin)
         DX11.Context->PSSetShader(g_pTexPixelShader, NULL, 0);
         DX11.Context->PSSetShaderResources( 0, 1, &g_textureView );
         DX11.Context->PSSetSamplers( 0, 1, &g_pSamplerLinear );
+
+        // Update image alpha with override or use config default
+        float maxAlpha = (image_alpha_override > 0.0f) ? image_alpha_override : g_constants.maxAlpha;
+        g_constants.maxAlpha = maxAlpha;
+
+        // Update constant buffer with new maxAlpha value using UpdateSubresource
+        DX11.Context->UpdateSubresource(g_pConstantBuffer, 0, NULL, &g_constants, 0, 0);
         DX11.Context->PSSetConstantBuffers( 0, 1, &g_pConstantBuffer );
 
         D3D11_VIEWPORT vp;
@@ -3532,7 +3619,7 @@ void draw_ui(float top, float bottom, float right_margin)
         vp.Width = rc.right - rc.left;
         vp.Height = bottom - top;
         DX11.Context->RSSetViewports(1, &vp);
-        draw_text(_font_size, right_margin);
+        draw_text(_font_size, right_margin, text_color);
     }
 
     //cleanup
@@ -4433,8 +4520,14 @@ HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags)
                 DX11.Device->GetImmediateContext(&DX11.Context);
                 int pixel_height = prep_ui(_font_size, right_margin);
                 if (pixel_height > 0) {
-                    float top = (_config->_overlay_location == 0) ? 0 : DX11.Height - pixel_height;
-                    draw_ui(top, top + pixel_height, right_margin);
+                    // Determine overlay location (use module override if provided)
+                    int overlay_location = opts.has_location ? opts.location : _config->_overlay_location;
+                    float top = (overlay_location == 0) ? 0 : DX11.Height - pixel_height;
+                    // Extract dynamic properties from options, with fallback to config defaults
+                    DWORD text_color = opts.has_text_color ? opts.text_color : _config->_overlay_text_color;
+                    DWORD bg_color = opts.has_background_color ? opts.background_color : _config->_overlay_background_color;
+                    float image_alpha = opts.has_image_alpha ? opts.image_alpha : 0.0f;
+                    draw_ui(top, top + pixel_height, right_margin, text_color, bg_color, image_alpha);
                 }
                 SAFE_RELEASE(g_pVertexBuffer);
                 SAFE_RELEASE(g_pTexVertexBuffer);
