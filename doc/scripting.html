@@ -815,9 +815,23 @@ See examples in modules: <span class="file">overdemo.lua</span> and <span class=
 
 <p>The text and image are displayed side by side: text - on the left,
 image - on the right. The layout options table allows to specify some
-formatting for the image. The following ones are supported:</p>
+formatting for the image and text colors. The following ones are supported:</p>
 
 <ul>
+<li>"<b>text_color</b>" : custom text color in "RRGGBBAA" hex format (e.g., "FF0000FF" for red)
+<ul>
+<li>If not specified, uses the default color from overlay.text-color in sider.ini</li>
+<li>Format: "RRGGBBAA" where RR=Red, GG=Green, BB=Blue, AA=Alpha (transparency)</li>
+</ul>
+<li>"<b>background_color</b>" : custom overlay background color in "RRGGBBAA" hex format (e.g., "00FF0080" for semi-transparent green)
+<ul>
+<li>If not specified, uses the default color from overlay.background-color in sider.ini</li>
+<li>Format: "RRGGBBAA" where RR=Red, GG=Green, BB=Blue, AA=Alpha (transparency)</li>
+</ul>
+<li>"<b>location</b>" : position of the overlay on screen ("top" or "bottom")
+<ul>
+<li>If not specified, uses the default location from overlay.location in sider.ini</li>
+</ul>
 <li>"<b>image_width</b>" : sets the width of the image on screen</li>
 <ul>
 <li>values &gt; 1 will be interpreted as desired width in pixels</li>
@@ -827,6 +841,11 @@ formatting for the image. The following ones are supported:</p>
 <ul>
 <li>values &gt; 1 will be interpreted as desired height in pixels</li>
 <li>values &lt; 1 will be interpreted as fraction of the total screen height.</li>
+</ul>
+<li>"<b>image_alpha</b>": overrides the image transparency (0.0 to 1.0)
+<ul>
+<li>0.0 = fully transparent, 1.0 = fully opaque</li>
+<li>If not specified, uses the default from overlay.image-alpha-max in sider.ini</li>
 </ul>
 <li>"<b>image_aspect_ratio</b>": a floating point number (width/height).<br />
 This option allows to enforce aspect ratio that is
@@ -845,9 +864,11 @@ width of 0.1 of total screen width is assumed, and the original aspect ratio
 of the image is used to calculate the height.</p>
 
 <p>Transparency of overlay images can be controlled by <b>overlay.image-alpha-max</b>
-settings in <span class="file">sider.ini</span>. This setting affects all modules and cannot be changed
-at runtime. See <a href="readme.html">readme.html</a> for details on how this settings works.
-</p>
+settings in <span class="file">sider.ini</span> (the global default), or overridden on a per-frame basis
+by the <b>image_alpha</b> option in the overlay_on options table (see above). 
+The sider.ini setting affects all modules as a fallback, but individual modules
+can now dynamically control image transparency by returning image_alpha in their
+options table. See <a href="readme.html">readme.html</a> for details on how the sider.ini setting works.
 
 <p class="evthdr">
 Event name: <span class="evt">"display_frame"</span><br />
