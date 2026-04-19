@@ -44,10 +44,10 @@ static int image_gc(lua_State *L)
         return 0;
     }
     if (img->_sig == IMAGE_OBJECT_MAGIC) {
-        DBG(2<<17) logu_("image object getting garbage-collected: %p (%s)\n", img, img->_filename);
+        DBG(1<<17) logu_("image object getting garbage-collected: %p (%s)\n", img, img->_filename);
         SAFE_RELEASE(img->_texture);
         SAFE_RELEASE(img->_textureView);
-        DBG(2<<17) logu_("image object garbage-collected successfully: %p (%s)\n", img, img->_filename);
+        DBG(1<<17) logu_("image object garbage-collected successfully: %p (%s)\n", img, img->_filename);
         img->_filename[0] = '\0';
     }
     lua_pop(L, lua_gettop(L));
@@ -80,7 +80,7 @@ static bool load_image(const char *image_path, ID3D11Resource **ppTexture, ID3D1
     }
     Utf8::free(ws);
     if (SUCCEEDED(hr)) {
-        DBG(2<<17) logu_("Loaded 2D texture: {%s}\n", image_path);
+        DBG(1<<17) logu_("Loaded 2D texture: {%s}\n", image_path);
     }
     else {
         logu_("PROBLEM: Cannot load texture from: {%s}\n", image_path);
@@ -106,11 +106,11 @@ static bool get_image_dimensions(ID3D11Resource *pTexture, int *width, int *heig
                 tex->GetDesc(&desc);
 
                 // This is a 2D texture. Check values of desc here
-                DBG(2<<17) logu_("get_image_dimenstions: texture Width: %d\n", desc.Width);
-                DBG(2<<17) logu_("get_image_dimenstions: texture Height: %d\n", desc.Height);
-                DBG(2<<17) logu_("get_image_dimenstions: texture MipLevels: %d\n", desc.MipLevels);
-                DBG(2<<17) logu_("get_image_dimenstions: texture ArraySize: %d\n", desc.ArraySize);
-                DBG(2<<17) logu_("get_image_dimenstions: texture Format: %d\n", desc.Format);
+                DBG(1<<17) logu_("get_image_dimenstions: texture Width: %d\n", desc.Width);
+                DBG(1<<17) logu_("get_image_dimenstions: texture Height: %d\n", desc.Height);
+                DBG(1<<17) logu_("get_image_dimenstions: texture MipLevels: %d\n", desc.MipLevels);
+                DBG(1<<17) logu_("get_image_dimenstions: texture ArraySize: %d\n", desc.ArraySize);
+                DBG(1<<17) logu_("get_image_dimenstions: texture Format: %d\n", desc.Format);
                 *width = desc.Width;
                 *height = desc.Height;
                 return true;
