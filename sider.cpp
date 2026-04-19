@@ -302,6 +302,7 @@ extern "C" SCOREBOARD_INFO *_sci = NULL;
 int _stats_table_index = 0;
 int _match_lib_index = 0;
 bool _has_on_frame(false);
+bool _in_on_frame(false);
 
 // home team encoded-id offset: 0x104
 // home team name offset:       0x108
@@ -4322,12 +4323,14 @@ HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags)
 
     if (_has_on_frame) {
         if (_config->_lua_enabled) {
+            _in_on_frame = true;
             // lua call-backs
             vector<module_t*>::iterator i;
             for (i = _modules.begin(); i != _modules.end(); i++) {
                 module_t *m = *i;
                 module_on_frame(m);
             }
+            _in_on_frame = false;
         }
     }
 

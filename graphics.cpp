@@ -22,6 +22,7 @@ extern ID3D11InputLayout* g_pTexInputLayout;
 extern ID3D11VertexShader* g_pTexVertexShader;
 extern ID3D11PixelShader* g_pTexPixelShader;
 extern ID3D11SamplerState *g_pSamplerLinear;
+extern bool _in_on_frame;
 
 
 static bool load_image(const char *image_path, ID3D11Resource **ppTexture, ID3D11ShaderResourceView **ppTextureView)
@@ -75,13 +76,22 @@ static bool get_image_dimensions(ID3D11Resource *pTexture, int *width, int *heig
 }
 
 int gfx_image(lua_State *L) {
+    if (!_in_on_frame) {
+        lua_pop(L, lua_gettop(L));
+        lua_pushstring(L, "image error: cannot be called outside of display_frame handler");
+        return lua_error(L);
+    }
+
     lua_pop(L, lua_gettop(L));
     return 0;
 }
 
 int gfx_sprite(lua_State *L) {
-    ID3D11Resource *pTexture(NULL);
-    ID3D11ShaderResourceView *pTextureView(NULL);
+    if (!_in_on_frame) {
+        lua_pop(L, lua_gettop(L));
+        lua_pushstring(L, "sprite error: cannot be called outside of display_frame handler");
+        return lua_error(L);
+    }
 
     int x = 0;
     if (lua_isnumber(L, 2)) {
@@ -107,6 +117,9 @@ int gfx_sprite(lua_State *L) {
     if (lua_isnumber(L, 6)) {
         height = luaL_checkint(L, 6);
     }
+
+    ID3D11Resource *pTexture(NULL);
+    ID3D11ShaderResourceView *pTextureView(NULL);
 
     if (lua_isstring(L, 1)) {
         // filename
