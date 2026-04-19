@@ -29,12 +29,38 @@ extern bool _in_on_frame;
 
 struct image_t {
     uint64_t _sig;
-    const char *_filename;
+    char _filename[MAX_PATH];
     ID3D11Resource *_texture;
     ID3D11ShaderResourceView *_textureView;
     int _width;
     int _height;
 };
+
+static int image_gc(lua_State *L)
+{
+    image_t* img = (image_t*)lua_touserdata(L, 1);
+    if (!img) {
+        lua_pop(L, lua_gettop(L));
+        return 0;
+    }
+    if (img->_sig == IMAGE_OBJECT_MAGIC) {
+        DBG(2<<17) logu_("image object getting garbage-collected: %p (%s)\n", img, img->_filename);
+        SAFE_RELEASE(img->_texture);
+        SAFE_RELEASE(img->_textureView);
+        DBG(2<<17) logu_("image object garbage-collected successfully: %p (%s)\n", img, img->_filename);
+        img->_filename[0] = '\0';
+    }
+    lua_pop(L, lua_gettop(L));
+    return 0;
+}
+
+void gfx_init(lua_State *L)
+{
+    luaL_newmetatable(L, "Sider.image");
+    lua_pushstring(L, "__gc");
+    lua_pushcfunction(L, image_gc);
+    lua_settable(L, -3);
+}
 
 static bool load_image(const char *image_path, ID3D11Resource **ppTexture, ID3D11ShaderResourceView **ppTextureView)
 {
@@ -80,11 +106,11 @@ static bool get_image_dimensions(ID3D11Resource *pTexture, int *width, int *heig
                 tex->GetDesc(&desc);
 
                 // This is a 2D texture. Check values of desc here
-                DBG(2>>17) logu_("get_image_dimenstions: texture Width: %d\n", desc.Width);
-                DBG(2>>17) logu_("get_image_dimenstions: texture Height: %d\n", desc.Height);
-                DBG(2>>17) logu_("get_image_dimenstions: texture MipLevels: %d\n", desc.MipLevels);
-                DBG(2>>17) logu_("get_image_dimenstions: texture ArraySize: %d\n", desc.ArraySize);
-                DBG(2>>17) logu_("get_image_dimenstions: texture Format: %d\n", desc.Format);
+                DBG(2<<17) logu_("get_image_dimenstions: texture Width: %d\n", desc.Width);
+                DBG(2<<17) logu_("get_image_dimenstions: texture Height: %d\n", desc.Height);
+                DBG(2<<17) logu_("get_image_dimenstions: texture MipLevels: %d\n", desc.MipLevels);
+                DBG(2<<17) logu_("get_image_dimenstions: texture ArraySize: %d\n", desc.ArraySize);
+                DBG(2<<17) logu_("get_image_dimenstions: texture Format: %d\n", desc.Format);
                 *width = desc.Width;
                 *height = desc.Height;
                 return true;
@@ -115,7 +141,7 @@ int gfx_image(lua_State *L) {
     img->_sig = IMAGE_OBJECT_MAGIC;
 
     // filename
-    img->_filename = strdup(s);
+    strncpy(img->_filename, s, MAX_PATH);
 
     // try to load the image
     if (!load_image(s, &img->_texture, &img->_textureView)) {
@@ -128,6 +154,9 @@ int gfx_image(lua_State *L) {
         lua_pushstring(L, "sprite error: unable to determine image dimensions");
         return lua_error(L);
     }
+
+    luaL_getmetatable(L, "Sider.image");
+    lua_setmetatable(L, -2);
 
     // new userdata on the stack
     return 1;
@@ -175,6 +204,7 @@ int gfx_sprite(lua_State *L) {
 
     ID3D11Resource *pTexture(NULL);
     ID3D11ShaderResourceView *pTextureView(NULL);
+    bool with_image(false);
 
     if (lua_isstring(L, 1)) {
         // filename
@@ -215,6 +245,8 @@ int gfx_sprite(lua_State *L) {
         image_t *img = checkimage(L, 1);
         pTexture = img->_texture;
         pTextureView = img->_textureView;
+
+        with_image = true;
 
         // if either width or height is not specified - get them from the image
         if (width == 0 || height == 0) {
@@ -333,8 +365,10 @@ int gfx_sprite(lua_State *L) {
     DX11.Context->OMSetBlendState(g_pBlendState, NULL, 0xffffffff);
     DX11.Context->Draw(6, 0); //6 vertices start at 0
 
-    SAFE_RELEASE(pTexture);
-    SAFE_RELEASE(pTextureView);
+    if (!with_image) {
+        SAFE_RELEASE(pTexture);
+        SAFE_RELEASE(pTextureView);
+    }
     SAFE_RELEASE(pTexVertexBuffer);
     SAFE_RELEASE(pRenderTargetView);
     SAFE_RELEASE(pConstantBuffer);

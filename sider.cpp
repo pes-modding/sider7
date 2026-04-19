@@ -6683,6 +6683,9 @@ void init_lua_support()
         init_audio_lib(L);
         _audio_lib_index = lua_gettop(L);
 
+        // graphics library
+        gfx_init(L);
+
         // stats table
         lua_newtable(L);
         _stats_table_index = lua_gettop(L);
