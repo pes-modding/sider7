@@ -2,6 +2,7 @@
 #define SIDER_H
 
 #include <string>
+#include "d3d11.h"
 
 using namespace std;
 
@@ -21,5 +22,40 @@ __declspec(dllexport) void applog_(const wchar_t *format, ...);
 __declspec(dllexport) void get_module_version(HMODULE, wstring&);
 __declspec(dllexport) bool get_start_game(wstring&);
 __declspec(dllexport) bool start_minimized();
+
+struct dx11_t {
+    ID3D11Device *Device;
+    ID3D11DeviceContext *Context;
+    IDXGISwapChain *SwapChain;
+    HWND Window;
+    UINT Width;
+    UINT Height;
+};
+
+struct SimpleVertex {
+    float x;
+    float y;
+    float z;
+    float w;
+    float r;
+    float g;
+    float b;
+    float a;
+};
+
+struct TexturedVertex {
+    float x;
+    float y;
+    float z;
+    float w;
+    float tx;
+    float ty;
+    float tz;
+    float tw;
+};
+
+struct TexConstants {
+    float maxAlpha;
+};
 
 #endif
