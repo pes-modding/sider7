@@ -15,6 +15,9 @@
 #define SAFE_RELEASE(x) if (x) { x->Release(); x = NULL; }
 #define DBG(n) if (_config->_debug & n)
 
+// sdr7img
+#define IMAGE_OBJECT_MAGIC 0x676D6937726473
+
 extern config_t*_config;
 extern dx11_t DX11;
 extern ID3D11BlendState* g_pBlendState;
@@ -24,9 +27,22 @@ extern ID3D11PixelShader* g_pTexPixelShader;
 extern ID3D11SamplerState *g_pSamplerLinear;
 extern bool _in_on_frame;
 
+struct image_t {
+    uint64_t _sig;
+    const char *_filename;
+    ID3D11Resource *_texture;
+    ID3D11ShaderResourceView *_textureView;
+    int _width;
+    int _height;
+};
 
 static bool load_image(const char *image_path, ID3D11Resource **ppTexture, ID3D11ShaderResourceView **ppTextureView)
 {
+    if (!DX11.Device) {
+        logu_("PROBLEM: D3D11 Device not available yet\n");
+        return false;
+    }
+
     HRESULT hr;
     wchar_t *ws = Utf8::utf8ToUnicode(image_path);
     if (memcmp(".dds", image_path+strlen(image_path)-4, 4)==0) {
@@ -49,6 +65,10 @@ static bool load_image(const char *image_path, ID3D11Resource **ppTexture, ID3D1
 
 static bool get_image_dimensions(ID3D11Resource *pTexture, int *width, int *height)
 {
+    if (!pTexture) {
+        return false;
+    }
+
     D3D11_RESOURCE_DIMENSION resType = D3D11_RESOURCE_DIMENSION_UNKNOWN;
     pTexture->GetType( &resType );
 
@@ -76,14 +96,49 @@ static bool get_image_dimensions(ID3D11Resource *pTexture, int *width, int *heig
 }
 
 int gfx_image(lua_State *L) {
-    if (!_in_on_frame) {
+    if (!lua_isstring(L, 1)) {
         lua_pop(L, lua_gettop(L));
-        lua_pushstring(L, "image error: cannot be called outside of display_frame handler");
+        lua_pushstring(L, "sprite error: no filename provided");
         return lua_error(L);
     }
 
+    const char *s = luaL_checkstring(L, 1);
     lua_pop(L, lua_gettop(L));
-    return 0;
+
+    image_t* img = (image_t*)lua_newuserdata(L, sizeof(image_t));
+    if (!img) {
+        lua_pop(L, lua_gettop(L));
+        lua_pushstring(L, "image error: cannot allocate new image object");
+        return lua_error(L);
+    }
+    memset(img, 0, sizeof(image_t));
+    img->_sig = IMAGE_OBJECT_MAGIC;
+
+    // filename
+    img->_filename = strdup(s);
+
+    // try to load the image
+    if (!load_image(s, &img->_texture, &img->_textureView)) {
+        lua_pop(L, lua_gettop(L));
+        lua_pushfstring(L, "sprite error: unable to load image from %s", s);
+        return lua_error(L);
+    }
+    if (!get_image_dimensions(img->_texture, &img->_width, &img->_height)) {
+        lua_pop(L, lua_gettop(L));
+        lua_pushstring(L, "sprite error: unable to determine image dimensions");
+        return lua_error(L);
+    }
+
+    // new userdata on the stack
+    return 1;
+}
+
+static image_t* checkimage(lua_State *L, int n) {
+    void *ud = lua_touserdata(L, n);
+    luaL_argcheck(L, ud != NULL, n, "'image' expected");
+    image_t* img = (image_t*)ud;
+    luaL_argcheck(L, img->_sig == IMAGE_OBJECT_MAGIC, n, "'image' expected");
+    return img;
 }
 
 int gfx_sprite(lua_State *L) {
@@ -152,6 +207,24 @@ int gfx_sprite(lua_State *L) {
                 width = int(height * (float(image_width) / float(image_height)));
             } else if (height == 0) {
                 height = int(width * (float(image_height) / float(image_width)));
+            }
+        }
+    }
+    else {
+        // has to be an image object
+        image_t *img = checkimage(L, 1);
+        pTexture = img->_texture;
+        pTextureView = img->_textureView;
+
+        // if either width or height is not specified - get them from the image
+        if (width == 0 || height == 0) {
+            if (width == 0 && height == 0) {
+                width = img->_width;
+                height = img->_height;
+            } else if (width == 0) {
+                width = int(height * (float(img->_width) / float(img->_height)));
+            } else if (height == 0) {
+                height = int(width * (float(img->_height) / float(img->_width)));
             }
         }
     }
