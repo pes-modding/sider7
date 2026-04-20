@@ -1631,6 +1631,7 @@ struct module_t {
     int evt_context_reset;
     int evt_display_frame;
     int evt_goal_scored;
+    int evt_graphics_ready;
     custom_event_t *custom_events;
 };
 vector<module_t*> _modules;
@@ -2104,6 +2105,23 @@ bool module_trophy_rewrite(module_t *m, WORD tournament_id, WORD *new_tid)
         LeaveCriticalSection(&_cs);
     }
     return assigned;
+}
+
+void module_graphics_ready(module_t *m)
+{
+    if (m->evt_graphics_ready != 0) {
+        EnterCriticalSection(&_cs);
+        lua_pushvalue(m->L, m->evt_graphics_ready);
+        lua_xmove(m->L, L, 1);
+        // push params
+        lua_pushvalue(L, 1); // ctx
+        if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+            const char *err = luaL_checkstring(L, -1);
+            logu_("[%d] lua ERROR from module_graphics_ready: %s\n",
+                GetCurrentThreadId(), err);
+        }
+        LeaveCriticalSection(&_cs);
+    }
 }
 
 void module_goal_scored(module_t *m, DWORD player_id, DWORD player_offset, int home_or_away, BYTE *player_info)
@@ -4554,6 +4572,14 @@ HRESULT sider_CreateSwapChain(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_S
     }
     else {
         prep_stuff();
+        if (_config->_lua_enabled) {
+            // lua call-backs
+            vector<module_t*>::iterator i;
+            for (i = _modules.begin(); i != _modules.end(); i++) {
+                module_t *m = *i;
+                module_graphics_ready(m);
+            }
+        }
 
         logu_("Hooking Present\n");
         _org_Present = present;
@@ -6369,6 +6395,12 @@ static int sider_context_register(lua_State *L)
         lua_pushvalue(L, -1);
         lua_xmove(L, _curr_m->L, 1);
         _curr_m->evt_goal_scored = lua_gettop(_curr_m->L);
+        logu_("Registered for \"%s\" event\n", event_key);
+    }
+    else if (strcmp(event_key, "graphics_ready")==0) {
+        lua_pushvalue(L, -1);
+        lua_xmove(L, _curr_m->L, 1);
+        _curr_m->evt_graphics_ready = lua_gettop(_curr_m->L);
         logu_("Registered for \"%s\" event\n", event_key);
     }
     else if (strncmp(event_key, "custom:", strlen("custom:"))==0) {
