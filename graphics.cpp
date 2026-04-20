@@ -36,6 +36,14 @@ struct image_t {
     int _height;
 };
 
+static image_t* checkimage(lua_State *L, int n) {
+    void *ud = lua_touserdata(L, n);
+    luaL_argcheck(L, ud != NULL, n, "'image' expected");
+    image_t* img = (image_t*)ud;
+    luaL_argcheck(L, img->_sig == IMAGE_OBJECT_MAGIC, n, "'image' expected");
+    return img;
+}
+
 static int image_gc(lua_State *L)
 {
     image_t* img = (image_t*)lua_touserdata(L, 1);
@@ -54,11 +62,34 @@ static int image_gc(lua_State *L)
     return 0;
 }
 
+static int image_index(lua_State *L)
+{
+    image_t* img = checkimage(L, 1);
+    const char *key = luaL_checkstring(L, 2);
+    lua_pop(L, lua_gettop(L));
+    if (strncmp(key, "width", 5)==0) {
+        lua_pushnumber(L, img->_width);
+        return 1;
+    }
+    else if (strncmp(key, "height", 6)==0) {
+        lua_pushnumber(L, img->_height);
+        return 1;
+    }
+    else if (strncmp(key, "filename", 8)==0) {
+        lua_pushstring(L, img->_filename);
+        return 1;
+    }
+    return 0;
+}
+
 void gfx_init(lua_State *L)
 {
     luaL_newmetatable(L, "Sider.image");
     lua_pushstring(L, "__gc");
     lua_pushcfunction(L, image_gc);
+    lua_settable(L, -3);
+    lua_pushstring(L, "__index");
+    lua_pushcfunction(L, image_index);
     lua_settable(L, -3);
 }
 
@@ -80,7 +111,7 @@ static bool load_image(const char *image_path, ID3D11Resource **ppTexture, ID3D1
     }
     Utf8::free(ws);
     if (SUCCEEDED(hr)) {
-        DBG(1<<17) logu_("Loaded 2D texture: {%s}\n", image_path);
+        DBG(1<<18) logu_("Loaded 2D texture: {%s}\n", image_path);
     }
     else {
         logu_("PROBLEM: Cannot load texture from: {%s}\n", image_path);
@@ -106,11 +137,11 @@ static bool get_image_dimensions(ID3D11Resource *pTexture, int *width, int *heig
                 tex->GetDesc(&desc);
 
                 // This is a 2D texture. Check values of desc here
-                DBG(1<<17) logu_("get_image_dimenstions: texture Width: %d\n", desc.Width);
-                DBG(1<<17) logu_("get_image_dimenstions: texture Height: %d\n", desc.Height);
-                DBG(1<<17) logu_("get_image_dimenstions: texture MipLevels: %d\n", desc.MipLevels);
-                DBG(1<<17) logu_("get_image_dimenstions: texture ArraySize: %d\n", desc.ArraySize);
-                DBG(1<<17) logu_("get_image_dimenstions: texture Format: %d\n", desc.Format);
+                DBG(1<<18) logu_("get_image_dimenstions: texture Width: %d\n", desc.Width);
+                DBG(1<<18) logu_("get_image_dimenstions: texture Height: %d\n", desc.Height);
+                DBG(1<<18) logu_("get_image_dimenstions: texture MipLevels: %d\n", desc.MipLevels);
+                DBG(1<<18) logu_("get_image_dimenstions: texture ArraySize: %d\n", desc.ArraySize);
+                DBG(1<<18) logu_("get_image_dimenstions: texture Format: %d\n", desc.Format);
                 *width = desc.Width;
                 *height = desc.Height;
                 return true;
@@ -160,14 +191,6 @@ int gfx_image(lua_State *L) {
 
     // new userdata on the stack
     return 1;
-}
-
-static image_t* checkimage(lua_State *L, int n) {
-    void *ud = lua_touserdata(L, n);
-    luaL_argcheck(L, ud != NULL, n, "'image' expected");
-    image_t* img = (image_t*)ud;
-    luaL_argcheck(L, img->_sig == IMAGE_OBJECT_MAGIC, n, "'image' expected");
-    return img;
 }
 
 int gfx_sprite(lua_State *L) {
