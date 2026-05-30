@@ -187,14 +187,20 @@ struct MATCH_INFO_STRUCT {
     BYTE num_subs_et; //subs in extra time
     BYTE db0x17;
     WORD stadium_choice;
-    WORD unknown5;
-    DWORD timeofday_choice; // 0-day, 1-night
+    WORD ball_choice;
+    DWORD timeofday_choice; // 0-day, 1-night, 2-random
     DWORD weather_choice;   // 0-fine, 1-rainy, 2-snow
     DWORD weather_effects; // 0-nothing, 1-later, 2-now
     DWORD season_choice; // 0-summer, 1-winter
-    DWORD unknown9[10];
+    DWORD length_of_grass_choice; // 0-long, 1-normal, 2-short, 3-random
+    DWORD field_conditions_choice; // 0-dry, 1-normal, 2-wet, 3-random
+    DWORD unknown9[8];
     struct STAD_STRUCT stad;
-    BYTE unknown10[0xa0];
+    BYTE unknown10[0x88];
+    DWORD kickoff_timestamp;
+    DWORD unknown11[3];
+    DWORD kickoff_timestamp_org;
+    DWORD unknown12[1];
     BYTE home_player_kit_id;
     BYTE home_player_kit_id_unknown[3];
     BYTE away_player_kit_id;
@@ -203,7 +209,7 @@ struct MATCH_INFO_STRUCT {
     BYTE home_gk_kit_id_unknown[3];
     BYTE away_gk_kit_id;
     BYTE away_gk_kit_id_unknown[3];
-    DWORD unknown11[2];
+    DWORD unknown13[2];
     TEAM_INFO_STRUCT home;
     TEAM_INFO_STRUCT away;
 };
@@ -272,10 +278,13 @@ struct SCHEDULE_ENTRY {
     WORD tournament_id;
     BYTE match_info;
     BYTE unknown2;
-    DWORD unknown3[3];
+    DWORD unknown3[2];
+    BYTE kickoff_time_hours;
+    BYTE kickoff_time_minutes;
+    BYTE unknown4[2];
     DWORD home_team_encoded;
     DWORD away_team_encoded;
-    DWORD unknown4;
+    DWORD unknown5;
 };
 
 #define TT_LEN 0x148
@@ -320,7 +329,7 @@ void lua_reload_modified_modules();
 const char *_context_fields[] = {
     "match_id", "match_info", "match_leg",// "match_time",
     "away_team", "home_team", "stadium_choice", "stadium",
-    "weather", "weather_effects", "timeofday", "season",
+    "weather", "weather_effects", "timeofday", "season", "length_of_grass", "field_conditions",
     "tournament_id", "mis", "sci", "difficulty", "extra_time", "penalties",
     "substitutions", "substitutions_in_extra_time",
 };
@@ -1641,6 +1650,7 @@ struct module_t {
     int evt_set_stadium;
     int evt_set_conditions;
     int evt_set_match_settings;
+    int evt_set_kickoff_datetime;
     int evt_after_set_conditions;
     /*
     int evt_set_stadium_for_replay;
@@ -2329,6 +2339,36 @@ bool module_set_match_settings(module_t *m, MATCH_INFO_STRUCT *mi)
     return res;
 }
 
+bool module_set_kickoff_datetime(module_t *m, MATCH_INFO_STRUCT *mi)
+{
+    bool res(false);
+    if (m->evt_set_kickoff_datetime != 0) {
+        //int x = 0;
+        //int y = 1/x;
+
+        EnterCriticalSection(&_cs);
+        lua_pushvalue(m->L, m->evt_set_kickoff_datetime);
+        lua_xmove(m->L, L, 1);
+        // push params
+        lua_pushvalue(L, 1); // ctx
+        lua_pushinteger(L, mi->kickoff_timestamp_org);
+        if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
+            const char *err = luaL_checkstring(L, -1);
+            logu_("[%d] lua ERROR from module_set_kickoff_datetime: %s\n", GetCurrentThreadId(), err);
+        }
+        else {
+            mi->kickoff_timestamp = mi->kickoff_timestamp_org;
+            if (lua_isnumber(L, -1)) {
+                mi->kickoff_timestamp = luaL_checkinteger(L, -1);
+                res = true;
+            }
+        }
+        lua_pop(L, 1);
+        LeaveCriticalSection(&_cs);
+    }
+    return res;
+}
+
 bool module_set_conditions(module_t *m, MATCH_INFO_STRUCT *mi)
 {
     bool res(false);
@@ -2350,6 +2390,10 @@ bool module_set_conditions(module_t *m, MATCH_INFO_STRUCT *mi)
         lua_setfield(L, -2, "weather_effects");
         lua_pushinteger(L, ss->season);
         lua_setfield(L, -2, "season");
+        lua_pushinteger(L, mi->length_of_grass_choice);
+        lua_setfield(L, -2, "length_of_grass");
+        lua_pushinteger(L, mi->field_conditions_choice);
+        lua_setfield(L, -2, "field_conditions");
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
             logu_("[%d] lua ERROR from module_set_conditions: %s\n", GetCurrentThreadId(), err);
@@ -2373,6 +2417,16 @@ bool module_set_conditions(module_t *m, MATCH_INFO_STRUCT *mi)
             lua_getfield(L, -1, "season");
             if (lua_isnumber(L, -1)) {
                 ss->season = luaL_checkinteger(L, -1);
+            }
+            lua_pop(L, 1);
+            lua_getfield(L, -1, "length_of_grass");
+            if (lua_isnumber(L, -1)) {
+                mi->length_of_grass_choice = luaL_checkinteger(L, -1);
+            }
+            lua_pop(L, 1);
+            lua_getfield(L, -1, "field_conditions");
+            if (lua_isnumber(L, -1)) {
+                mi->field_conditions_choice = luaL_checkinteger(L, -1);
             }
             lua_pop(L, 1);
             res = true;
@@ -2596,6 +2650,7 @@ char *module_stadium_name(module_t *m, char *name, BYTE stadium_id, SCHEDULE_ENT
         lua_pushstring(L, name);
         lua_pushinteger(L, stadium_id);
         if (se) {
+            logu_("SCHEDULE_ENTRY: %p\n", se);
             lua_newtable(L);
             lua_pushinteger(L, se->tournament_id);
             lua_setfield(L, -2, "tournament_id");
@@ -2605,6 +2660,10 @@ char *module_stadium_name(module_t *m, char *name, BYTE stadium_id, SCHEDULE_ENT
             lua_setfield(L, -2, "home_team");
             lua_pushinteger(L, decode_team_id(se->away_team_encoded));
             lua_setfield(L, -2, "away_team");
+            lua_pushinteger(L, se->kickoff_time_hours);
+            lua_setfield(L, -2, "kickoff_time_hours");
+            lua_pushinteger(L, se->kickoff_time_minutes);
+            lua_setfield(L, -2, "kickoff_time_minutes");
         }
         else {
             lua_pushnil(L);
@@ -5177,6 +5236,8 @@ void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
         set_context_field_int("weather", dest_ss->weather);
         set_context_field_int("weather_effects", mi->weather_effects);
         set_context_field_int("season", dest_ss->season);
+        set_context_field_int("length_of_grass", mi->length_of_grass_choice);
+        set_context_field_int("field_conditions", mi->field_conditions_choice);
 
         for (i = _modules.begin(); i != _modules.end(); i++) {
             module_t *m = *i;
@@ -5190,6 +5251,13 @@ void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
         set_context_field_int("penalties", mi->penalties);
         set_context_field_int("substitutions", mi->num_subs);
         set_context_field_int("substitutions_in_extra_time", mi->num_subs_et);
+
+        for (i = _modules.begin(); i != _modules.end(); i++) {
+            module_t *m = *i;
+            if (module_set_kickoff_datetime(m, mi)) {
+                break;
+            }
+        }
 
         // clear stadium_choice in context
         //set_context_field_nil("stadium_choice");
@@ -6305,6 +6373,12 @@ static int sider_context_register(lua_State *L)
         lua_pushvalue(L, -1);
         lua_xmove(L, _curr_m->L, 1);
         _curr_m->evt_set_match_settings = lua_gettop(_curr_m->L);
+        logu_("Registered for \"%s\" event\n", event_key);
+    }
+    else if (strcmp(event_key, "set_kickoff_datetime")==0) {
+        lua_pushvalue(L, -1);
+        lua_xmove(L, _curr_m->L, 1);
+        _curr_m->evt_set_kickoff_datetime = lua_gettop(_curr_m->L);
         logu_("Registered for \"%s\" event\n", event_key);
     }
     else if (strcmp(event_key, "after_set_conditions")==0) {
